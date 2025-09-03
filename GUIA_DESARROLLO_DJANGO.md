@@ -121,9 +121,9 @@
 ### 🏥 Fase 4: Modelos del Dominio Médico
 
 #### 4.1 Modelo de Paciente
-- [ ] Crear app `patients`: `python manage.py startapp patients`
-- [ ] Mover a `apps/patients/`
-- [ ] Crear modelo `Patient` en `apps/patients/models.py`:
+- [x] Crear app `patients`: `python manage.py startapp patients`
+- [x] Mover a `apps/patients/`
+- [x] Crear modelo `Patient` en `apps/patients/models.py`:
   ```python
   class Patient(models.Model):
       user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -135,12 +135,12 @@
       medical_history = models.TextField(blank=True)
       allergies = models.TextField(blank=True)
   ```
-- [ ] Crear y aplicar migraciones
+- [x] Crear y aplicar migraciones
 
-#### 4.2 Modelo de Doctor
-- [ ] Crear app `doctors`: `python manage.py startapp doctors`
-- [ ] Mover a `apps/doctors/`
-- [ ] Crear modelo `Doctor` en `apps/doctors/models.py`:
+#### 4.2 Modelo de Doctor ✅
+- [x] Crear app `doctors`: `python manage.py startapp doctors`
+- [x] Mover a `apps/doctors/`
+- [x] Crear modelo `Doctor` en `apps/doctors/models.py`:
   ```python
   class Doctor(models.Model):
       user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -151,12 +151,12 @@
       bio = models.TextField()
       is_available = models.BooleanField(default=True)
   ```
-- [ ] Crear y aplicar migraciones
+- [x] Crear y aplicar migraciones
 
-#### 4.3 Modelo de Citas
-- [ ] Crear app `appointments`: `python manage.py startapp appointments`
-- [ ] Mover a `apps/appointments/`
-- [ ] Crear modelo `Appointment` en `apps/appointments/models.py`:
+#### 4.3 Modelo de Citas ✅
+- [x] Crear app `appointments`: `python manage.py startapp appointments`
+- [x] Mover a `apps/appointments/`
+- [x] Crear modelo `Appointment` en `apps/appointments/models.py`:
   ```python
   class Appointment(models.Model):
       STATUS_CHOICES = [
@@ -180,86 +180,86 @@
           unique_together = ['doctor', 'date', 'time']
           ordering = ['date', 'time']
   ```
-- [ ] Crear y aplicar migraciones
+- [x] Crear y aplicar migraciones
 
 ---
 
 ### 🔄 Fase 5: Serializers y API
 
-#### 5.1 Serializers de Usuario
-- [ ] Crear `UserSerializer` en `apps/users/serializers.py`
-- [ ] Crear `UserRegistrationSerializer`
-- [ ] Crear `UserProfileSerializer`
-- [ ] Implementar validaciones personalizadas
+#### 5.1 Serializers de Usuario ✅
+- [x] Crear `UserSerializer` en `apps/users/serializers.py`
+- [x] Crear `UserRegistrationSerializer`
+- [x] Crear `UserProfileSerializer`
+- [x] Implementar validaciones personalizadas
 
-#### 5.2 Serializers de Dominio
-- [ ] Crear `PatientSerializer` en `apps/patients/serializers.py`
-- [ ] Crear `DoctorSerializer` en `apps/doctors/serializers.py`
-- [ ] Crear `AppointmentSerializer` en `apps/appointments/serializers.py`
-- [ ] Implementar serializers anidados para relaciones
-- [ ] Agregar validaciones de negocio (ej: no citas en el pasado)
+#### 5.2 Serializers de Dominio ✅
+- [x] Crear `PatientSerializer` en `apps/patients/serializers.py`
+- [x] Crear `DoctorSerializer` en `apps/doctors/serializers.py`
+- [x] Crear `AppointmentSerializer` en `apps/appointments/serializers.py`
+- [x] Implementar serializers anidados para relaciones
+- [x] Agregar validaciones de negocio (ej: no citas en el pasado)
 
 #### 5.3 ViewSets y Views
-- [ ] Crear `UserViewSet` en `apps/users/views.py`
-- [ ] Crear `PatientViewSet` en `apps/patients/views.py`
-- [ ] Crear `DoctorViewSet` en `apps/doctors/views.py`
-- [ ] Crear `AppointmentViewSet` en `apps/appointments/views.py`
-- [ ] Implementar acciones personalizadas (ej: `available_slots`)
-- [ ] Aplicar permisos apropiados a cada ViewSet
+- [x] Crear `UserViewSet` en `apps/users/views.py`
+- [x] Crear `PatientViewSet` en `apps/patients/views.py`
+- [x] Crear `DoctorViewSet` en `apps/doctors/views.py`
+- [x] Crear `AppointmentViewSet` en `apps/appointments/views.py`
+- [x] Implementar acciones personalizadas (ej: `available_slots`)
+- [x] Aplicar permisos apropiados a cada ViewSet
 
 #### 5.4 Configuración de URLs
-- [ ] Crear `apps/users/urls.py` con rutas de usuarios
-- [ ] Crear `apps/patients/urls.py`
-- [ ] Crear `apps/doctors/urls.py`
-- [ ] Crear `apps/appointments/urls.py`
-- [ ] Configurar router de DRF en cada app
-- [ ] Incluir URLs de apps en `config/urls.py`
+- [x] Crear `apps/users/urls.py` con rutas de usuarios
+- [x] Crear `apps/patients/urls.py`
+- [x] Crear `apps/doctors/urls.py`
+- [x] Crear `apps/appointments/urls.py`
+- [x] Configurar router de DRF en cada app
+- [x] Incluir URLs de apps en `config/urls.py`
 
 ---
 
 ### 🔍 Fase 6: Funcionalidades Avanzadas
 
-#### 6.1 Filtros y Búsquedas
-- [ ] Instalar `django-filter`
-- [ ] Crear filtros personalizados para citas por fecha
-- [ ] Implementar búsqueda por nombre de doctor
-- [ ] Agregar filtros por especialización
-- [ ] Implementar paginación personalizada
+#### 6.1 Filtros y Búsquedas ✅
+- [x] Instalar `django-filter`
+- [x] Crear filtros personalizados para citas por fecha
+- [x] Implementar búsqueda por nombre de doctor
+- [x] Agregar filtros por especialización
+- [x] Implementar paginación personalizada
 
-#### 6.2 Validaciones de Negocio
-- [ ] Validar que no se puedan crear citas en horarios ocupados
-- [ ] Validar que las citas sean en horario laboral
-- [ ] Implementar validación de 24h para modificaciones
-- [ ] Crear validadores personalizados para fechas
+#### 6.2 Validaciones de Negocio ✅
+- [x] Validar que no se puedan crear citas en horarios ocupados
+- [x] Validar que las citas sean en horario laboral
+- [x] Implementar validación de 24h para modificaciones
+- [x] Crear validadores personalizados para fechas
 
 #### 6.3 Signals y Hooks
-- [ ] Crear signal para crear perfil de paciente automáticamente
-- [ ] Implementar signal para envío de notificaciones
-- [ ] Crear hooks para logging de acciones importantes
+- [x] Crear signal para crear perfil de paciente automáticamente
+- [x] Implementar signal para envío de notificaciones
+- [x] Crear hooks para logging de acciones importantes
 
 ---
 
 ### 📧 Fase 7: Sistema de Notificaciones
 
 #### 7.1 Configuración de Celery
-- [ ] Instalar `celery[redis]`
-- [ ] Configurar Redis como broker
-- [ ] Crear `config/celery.py`
-- [ ] Configurar Celery en `config/__init__.py`
-- [ ] Crear tareas básicas de prueba
+- [x] Instalar `celery[redis]`
+- [x] Configurar Redis como broker
+- [x] Crear `config/celery.py`
+- [x] Configurar Celery en `config/__init__.py`
+- [x] Crear tareas básicas de prueba
 
 #### 7.2 Notificaciones por Email
-- [ ] Configurar SMTP en settings
-- [ ] Crear templates de email
-- [ ] Implementar tarea de envío de confirmación de cita
-- [ ] Crear tarea de recordatorio de cita
-- [ ] Implementar notificación de cancelación
+- [x] Configurar SMTP en settings
+- [x] Crear templates de email
+- [x] Implementar tarea de envío de confirmación de cita
+- [x] Crear tarea de recordatorio de cita
+- [x] Implementar notificación de cancelación
 
 #### 7.3 Tareas Programadas
-- [ ] Instalar `django-celery-beat`
-- [ ] Configurar tareas periódicas
-- [ ] Crear tarea de recordatorios diarios
-- [ ] Implementar limpieza de datos antiguos
+- [x] Instalar `django-celery-beat`
+- [x] Configurar tareas periódicas
+- [x] Crear tarea de recordatorios diarios
+- [x] Implementar limpieza de datos antiguos
 
 ---
 
@@ -273,10 +273,10 @@
 - [ ] Agregar métricas de cancelaciones
 
 #### 8.2 Exportación de Datos
-- [ ] Implementar exportación a CSV
-- [ ] Crear endpoint de exportación de citas
-- [ ] Implementar filtros para exportación
-- [ ] Agregar permisos de administrador para reportes
+- [x] Implementar exportación a CSV
+- [x] Crear endpoint de exportación de citas
+- [x] Implementar filtros para exportación
+- [x] Agregar permisos de administrador para reportes
 
 ---
 

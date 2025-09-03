@@ -146,22 +146,39 @@
     );
   }
   ```
-- [x] Crear componente de rutas protegidas `ProtectedRoute.tsx` ✅ Implementado con ProtectedRoute y PublicRoute
+- [x] Crear componente de rutas protegidas `ProtectedRoute.tsx` ✅ Implementado con ProtectedRoute y PublicRoute:
+  ```typescript
+  const ProtectedRoute = ({ children }: { children: ReactNode }) => {
+    const { isAuthenticated, isLoading } = useAuth();
+    
+    if (isLoading) {
+      return <div>Cargando...</div>;
+    }
+    
+    if (!isAuthenticated) {
+      return <Navigate to="/login" replace />;
+    }
+    
+    return <>{children}</>;
+  };
+  ```
 - [x] Crear páginas principales: HomePage, LoginPage, DashboardPage ✅ Páginas funcionales con UI moderna
 - [x] Implementar sistema de autenticación simulado ✅ Con localStorage para desarrollo
 
 #### 3.3 Formularios y Validaciones
-- [ ] Instalar React Hook Form: `npm install react-hook-form`
-- [ ] Instalar Yup: `npm install yup @hookform/resolvers`
-- [ ] Crear hook personalizado para formularios
-- [ ] Configurar validaciones base
+- [x] Instalar React Hook Form: `npm install react-hook-form` ✅ Instalado correctamente
+- [x] Instalar Zod: `npm install zod @hookform/resolvers` ✅ Zod en lugar de Yup para mejor TypeScript
+- [x] Crear hook personalizado para formularios ✅ `useFormValidation` en `/src/lib/hooks/useFormValidation.ts`
+- [x] Configurar validaciones base ✅ Esquemas Zod en `/src/lib/validations.ts`
+- [x] Actualizar LoginPage con React Hook Form ✅ Formulario con validación en tiempo real
+- [x] Crear RegisterPage con validaciones ✅ Formulario completo con confirmación de contraseña
 
 ---
 
 ### 🔐 Fase 4: Sistema de Autenticación
 
-#### 4.1 Context de Autenticación
-- [ ] Crear `src/contexts/AuthContext.tsx`:
+#### 4.1 Context de Autenticación ✅
+- [x] Crear `src/contexts/AuthContext.tsx`: ✅ Completado
   ```typescript
   interface AuthContextType {
     user: User | null;
@@ -172,12 +189,12 @@
     isAuthenticated: boolean;
   }
   ```
-- [ ] Implementar provider de autenticación
-- [ ] Crear hook `useAuth()` para consumir el context
-- [ ] Implementar persistencia de sesión con localStorage
+- [x] Implementar provider de autenticación ✅ AuthProvider implementado con useReducer
+- [x] Crear hook `useAuth()` para consumir el context ✅ Hook creado con validación
+- [x] Implementar persistencia de sesión con localStorage ✅ Persistencia automática implementada
 
-#### 4.2 Servicios de Autenticación
-- [ ] Crear `src/services/authService.ts`:
+#### 4.2 Servicios de Autenticación ✅
+- [x] Crear `src/services/authService.ts` ✅ Completado:
   ```typescript
   export const authService = {
     login: async (email: string, password: string) => {
@@ -190,28 +207,28 @@
     },
     logout: async () => {
       await api.post('/auth/logout/');
+      localStorage.removeItem('token');
     },
     refreshToken: async () => {
       const response = await api.post('/auth/refresh/');
       return response.data;
-    }
+    },
+    // + métodos adicionales: getProfile, updateProfile, etc.
   };
   ```
-- [ ] Implementar manejo de refresh tokens
-- [ ] Crear interceptor para renovación automática de tokens
+- [x] Implementar manejo de refresh tokens ✅ Lógica implementada
+- [x] Crear interceptor para renovación automática de tokens ✅ Configurado en api.ts
 
-#### 4.3 Páginas de Autenticación
-- [ ] Crear `src/pages/auth/LoginPage.tsx`:
+#### 4.3 Páginas de Autenticación ✅
+- [x] Crear `src/pages/auth/LoginPage.tsx` ✅ Completado:
   ```typescript
   const LoginPage = () => {
-    const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
-      resolver: yupResolver(loginSchema)
-    });
     const { login, isLoading } = useAuth();
+    const navigate = useNavigate();
     
-    const onSubmit = async (data: LoginForm) => {
+    const handleSubmit = async (data: LoginData) => {
       try {
-        await login(data.email, data.password);
+        await login(data);
         navigate('/dashboard');
       } catch (error) {
         toast.error('Error al iniciar sesión');
@@ -220,10 +237,18 @@
     // ... resto del componente
   };
   ```
-- [ ] Crear `src/pages/auth/RegisterPage.tsx`
+- [x] Crear `src/pages/auth/RegisterPage.tsx` ✅ Completado con useAuth
 - [ ] Crear `src/pages/auth/ForgotPasswordPage.tsx`
-- [ ] Implementar validaciones de formulario
-- [ ] Agregar manejo de errores y loading states
+- [x] Implementar validaciones de formulario ✅ Con React Hook Form y Zod
+- [x] Agregar manejo de errores y loading states ✅ Implementado
+
+#### 4.4 Rutas Protegidas ✅
+- [x] Actualizar `src/components/auth/ProtectedRoute.tsx` ✅ Completado con manejo de loading
+- [x] Crear `PublicRoute` para páginas de auth ✅ Implementado (evita acceso si ya está logueado)
+- [x] Configurar rutas en `App.tsx` ✅ Todas las rutas configuradas
+- [x] Implementar redirecciones automáticas ✅ Funcionando correctamente
+
+---
 
 ---
 

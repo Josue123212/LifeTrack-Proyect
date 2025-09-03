@@ -1,107 +1,65 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/Card';
 import toast from 'react-hot-toast';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { Card, CardContent, CardHeader } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { useFormValidation } from '../lib/hooks/useFormValidation';
+import { loginSchema, type LoginFormData } from '../lib/validations';
+import { useAuth } from '@/contexts/AuthContext';
 
 /**
  * 🔐 PÁGINA DE LOGIN
  * 
  * Página de autenticación para el sistema de citas médicas.
- * Permite a los usuarios iniciar sesión con email y contraseña.
+ * Utiliza React Hook Form con validaciones Zod para una mejor UX.
  */
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+  const [showPassword, setShowPassword] = React.useState(false);
+  const { login, isLoading } = useAuth();
+
+  // 🎯 Hook de formulario con validaciones
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isValid },
+  } = useFormValidation<LoginFormData>({
+    schema: loginSchema,
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   /**
-   * Maneja los cambios en los inputs del formulario
+   * 🔑 Maneja el proceso de login
    */
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Limpiar error del campo cuando el usuario empiece a escribir
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  /**
-   * Valida los datos del formulario
-   */
-  const validateForm = (): boolean => {
-    const newErrors: { [key: string]: string } = {};
-
-    if (!formData.email) {
-      newErrors.email = 'El email es requerido';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'El email no es válido';
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'La contraseña es requerida';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  /**
-   * Maneja el envío del formulario de login
-   */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsLoading(true);
-    
+  const handleLogin = async (data: LoginFormData) => {
     try {
-      // TODO: Implementar llamada a la API de autenticación
-      // const response = await authService.login(formData.email, formData.password);
+      await login({
+        email: data.email,
+        password: data.password,
+        rememberMe: data.rememberMe
+      });
       
-      // Simulación de login exitoso
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      toast.success('¡Inicio de sesión exitoso!');
-      
-      // Redirigir al dashboard
+      // Redirigir al dashboard después del login exitoso
       navigate('/dashboard');
-      
     } catch (error) {
+      // El error ya se maneja en el AuthContext con toast
       console.error('Error en login:', error);
-      toast.error('Error al iniciar sesión. Verifica tus credenciales.');
-    } finally {
-      setIsLoading(false);
     }
   };
 
   /**
-   * Maneja el login de demostración
+   * 🔍 Toggle para mostrar/ocultar contraseña
    */
-  const handleDemoLogin = () => {
-    setFormData({
-      email: 'demo@example.com',
-      password: 'demo123'
-    });
-    toast.success('Datos de demostración cargados');
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  /**
+   * 🎨 Maneja el login con Google (placeholder)
+   */
+  const handleGoogleLogin = () => {
+    toast.info('Login con Google próximamente');
   };
 
   return (
@@ -125,7 +83,7 @@ const LoginPage: React.FC = () => {
             </CardTitle>
           </CardHeader>
           
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit(handleLogin)}>
             <CardContent className="space-y-4">
               {/* Email Input */}
               <div>
@@ -134,12 +92,10 @@ const LoginPage: React.FC = () => {
                 </label>
                 <Input
                   id="email"
-                  name="email"
                   type="email"
                   placeholder="tu@email.com"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  error={errors.email}
+                  {...register('email')}
+                  error={errors.email?.message}
                   disabled={isLoading}
                 />
               </div>
@@ -149,39 +105,51 @@ const LoginPage: React.FC = () => {
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                   Contraseña
                 </label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  error={errors.password}
-                  disabled={isLoading}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    {...register('password')}
+                    error={errors.password?.message}
+                    disabled={isLoading}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={togglePasswordVisibility}
+                  >
+                    {showPassword ? (
+                      <EyeSlashIcon className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <EyeIcon className="h-4 w-4 text-gray-400" />
+                    )}
+                  </button>
+                </div>
               </div>
 
-              {/* Demo Button */}
-              <div className="text-center">
+              {/* Quick Access Buttons */}
+              <div className="flex gap-2 justify-center">
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={handleDemoLogin}
+                  onClick={handleGoogleLogin}
                   disabled={isLoading}
                 >
-                  🎯 Cargar datos de demostración
+                  🌐 Google
                 </Button>
               </div>
             </CardContent>
 
-            <CardFooter className="flex flex-col space-y-4">
+            <div className="px-6 pb-6">
               {/* Submit Button */}
               <Button
                 type="submit"
                 variant="primary"
                 size="lg"
-                disabled={isLoading}
+                disabled={isLoading || !isValid}
                 className="w-full"
               >
                 {isLoading ? (
@@ -195,7 +163,7 @@ const LoginPage: React.FC = () => {
               </Button>
 
               {/* Links */}
-              <div className="text-center space-y-2">
+              <div className="text-center space-y-2 mt-4">
                 <p className="text-sm text-gray-600">
                   ¿No tienes una cuenta?{' '}
                   <Link to="/register" className="text-blue-600 hover:text-blue-800 font-medium">
@@ -208,7 +176,7 @@ const LoginPage: React.FC = () => {
                   </Link>
                 </p>
               </div>
-            </CardFooter>
+            </div>
           </form>
         </Card>
 

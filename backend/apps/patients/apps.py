@@ -3,12 +3,8 @@ from django.apps import AppConfig
 
 class PatientsConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'patients'
-    verbose_name = 'Pacientes'
+    name = 'apps.patients'
+    verbose_name = 'Gestión de Pacientes'
     
     def ready(self):
-        """Importar signals cuando la app esté lista"""
-        try:
-            import patients.signals  # noqa F401
-        except ImportError:
-            pass
+        import apps.patients.signals  # noqa F401

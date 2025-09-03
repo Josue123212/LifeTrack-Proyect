@@ -18,12 +18,28 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
+from apps.core.views import api_documentation, api_status
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    # API URLs
+    # API Documentation
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', api_documentation, name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    path('api/status/', api_status, name='api-status'),
+    
+    # API URLs - Apps
     path('api/users/', include('apps.users.urls')),
+    path('api/patients/', include('apps.patients.urls')),
+    path('api/doctors/', include('apps.doctors.urls')),
+    path('api/appointments/', include('apps.appointments.urls')),
+    path('api/reports/', include('apps.reports.urls')),
 ]
 
 # Servir archivos media en desarrollo

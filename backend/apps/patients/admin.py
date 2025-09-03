@@ -13,7 +13,7 @@ class PatientAdmin(admin.ModelAdmin):
         'full_name',
         'age',
         'gender',
-        'emergency_contact',
+        'emergency_contact_name',
         'created_at'
     ]
     

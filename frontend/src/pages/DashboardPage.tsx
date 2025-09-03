@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import toast from 'react-hot-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 /**
  * 📊 PÁGINA DE DASHBOARD
@@ -12,14 +13,18 @@ import toast from 'react-hot-toast';
  */
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   /**
    * Maneja el logout del usuario
    */
-  const handleLogout = () => {
-    // TODO: Implementar logout real con API
-    toast.success('Sesión cerrada exitosamente');
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
   };
 
   /**

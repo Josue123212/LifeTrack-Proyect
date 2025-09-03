@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { useAuth } from '@/contexts/AuthContext';
 
 /**
  * 🛡️ COMPONENTE DE RUTA PROTEGIDA
@@ -17,26 +18,7 @@ interface ProtectedRouteProps {
   requiredRole?: string[];
 }
 
-/**
- * Hook simulado para autenticación (temporal)
- * TODO: Reemplazar con el hook useAuth real
- */
-const useAuthSimulated = () => {
-  // Simulamos que el usuario está autenticado si hay un token en localStorage
-  const token = localStorage.getItem('demo_token');
-  const user = token ? {
-    id: '1',
-    name: 'Usuario Demo',
-    email: 'demo@example.com',
-    role: 'patient'
-  } : null;
 
-  return {
-    isAuthenticated: !!token,
-    user,
-    isLoading: false
-  };
-};
 
 /**
  * Componente de ruta protegida
@@ -45,7 +27,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children, 
   requiredRole 
 }) => {
-  const { isAuthenticated, user, isLoading } = useAuthSimulated();
+  const { isAuthenticated, user, isLoading } = useAuth();
   const location = useLocation();
 
   // Mostrar loading mientras se verifica la autenticación
