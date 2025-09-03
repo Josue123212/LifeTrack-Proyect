@@ -5,43 +5,43 @@
 ### 🚀 Fase 1: Configuración Inicial del Entorno
 
 #### 1.1 Setup del Entorno Python
-- [ ] Verificar Python 3.11+ instalado
-- [ ] Crear entorno virtual: `python -m venv venv`
-- [ ] Activar entorno virtual: `source venv/bin/activate` (Linux/Mac) o `venv\Scripts\activate` (Windows)
-- [ ] Actualizar pip: `python -m pip install --upgrade pip`
-- [ ] Crear archivo `.gitignore` para Python/Django
+- [x] Verificar Python 3.11+ instalado
+- [x] Crear entorno virtual: `python -m venv venv`
+- [x] Activar entorno virtual: `source venv/bin/activate` (Linux/Mac) o `venv\Scripts\activate` (Windows)
+- [x] Actualizar pip: `python -m pip install --upgrade pip`
+- [x] Crear archivo `.gitignore` para Python/Django
 
 #### 1.2 Instalación de Dependencias Base
-- [ ] Crear carpeta `backend/`
-- [ ] Crear `requirements/base.txt` con dependencias principales:
+- [x] Crear carpeta `backend/`
+- [x] Crear `requirements/base.txt` con dependencias principales:
   ```
   Django==5.0.1
   djangorestframework==3.14.0
   django-cors-headers==4.3.1
   python-decouple==3.8
-  Pillow==10.1.0
+  Pillow==11.3.0
   ```
-- [ ] Instalar dependencias: `pip install -r requirements/base.txt`
-- [ ] Crear `requirements/development.txt` y `requirements/production.txt`
+- [x] Instalar dependencias: `pip install -r requirements/base.txt`
+- [x] Crear `requirements/development.txt` y `requirements/production.txt`
 
 #### 1.3 Creación del Proyecto Django
-- [ ] Crear proyecto: `django-admin startproject config .`
-- [ ] Verificar estructura inicial creada
-- [ ] Probar servidor: `python manage.py runserver`
-- [ ] Confirmar que Django funciona en http://localhost:8000
+- [x] Crear proyecto: `django-admin startproject config .`
+- [x] Verificar estructura inicial creada
+- [x] Probar servidor: `python manage.py runserver`
+- [x] Confirmar que Django funciona en http://localhost:8000
 
 ---
 
 ### 🏗️ Fase 2: Configuración de Django REST Framework
 
 #### 2.1 Configuración Básica de DRF
-- [ ] Agregar apps a `INSTALLED_APPS` en `settings.py`:
+- [x] Agregar apps a `INSTALLED_APPS` en `settings.py`:
   ```python
   'rest_framework',
   'corsheaders',
   ```
-- [ ] Configurar middleware de CORS en `settings.py`
-- [ ] Configurar DRF en `settings.py`:
+- [x] Configurar middleware de CORS en `settings.py`
+- [x] Configurar DRF en `settings.py`:
   ```python
   REST_FRAMEWORK = {
       'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -54,26 +54,26 @@
   ```
 
 #### 2.2 Configuración de Base de Datos
-- [ ] Configurar SQLite para desarrollo en `settings.py`
-- [ ] Crear migraciones iniciales: `python manage.py makemigrations`
-- [ ] Aplicar migraciones: `python manage.py migrate`
-- [ ] Crear superusuario: `python manage.py createsuperuser`
+- [x] Configurar SQLite para desarrollo en `settings.py`
+- [x] Crear migraciones iniciales: `python manage.py makemigrations`
+- [x] Aplicar migraciones: `python manage.py migrate`
+- [x] Crear superusuario: `python manage.py createsuperuser`
 
 #### 2.3 Estructura de Settings
-- [ ] Crear carpeta `config/settings/`
-- [ ] Crear `base.py`, `development.py`, `production.py`
-- [ ] Mover configuraciones comunes a `base.py`
-- [ ] Configurar variables de entorno con `python-decouple`
-- [ ] Crear archivo `.env` para variables locales
+- [x] Crear carpeta `config/settings/`
+- [x] Crear `base.py`, `development.py`, `production.py`
+- [x] Mover configuraciones comunes a `base.py`
+- [x] Configurar variables de entorno con `python-decouple`
+- [x] Crear archivo `.env` para variables locales
 
 ---
 
 ### 👤 Fase 3: Sistema de Usuarios y Autenticación
 
 #### 3.1 Modelo User Personalizado
-- [ ] Crear app `users`: `python manage.py startapp users`
-- [ ] Mover app a carpeta `apps/users/`
-- [ ] Crear modelo `User` personalizado en `apps/users/models.py`:
+- [x] Crear app `users`: `python manage.py startapp users`
+- [x] Mover app a carpeta `apps/users/`
+- [x] Crear modelo `User` personalizado en `apps/users/models.py`:
   ```python
   class User(AbstractUser):
       ROLE_CHOICES = [
@@ -86,13 +86,13 @@
       role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='client')
       # ... otros campos
   ```
-- [ ] Configurar `AUTH_USER_MODEL` en settings
-- [ ] Crear y aplicar migraciones: `python manage.py makemigrations users`
-- [ ] Aplicar migraciones: `python manage.py migrate`
+- [x] Configurar `AUTH_USER_MODEL` en settings
+- [x] Crear y aplicar migraciones: `python manage.py makemigrations users`
+- [x] Aplicar migraciones: `python manage.py migrate`
 
 #### 3.2 Autenticación JWT
-- [ ] Instalar `djangorestframework-simplejwt`
-- [ ] Configurar JWT en settings:
+- [x] Instalar `djangorestframework-simplejwt`
+- [x] Configurar JWT en settings:
   ```python
   from datetime import timedelta
   SIMPLE_JWT = {
@@ -101,20 +101,20 @@
       'ROTATE_REFRESH_TOKENS': True,
   }
   ```
-- [ ] Crear serializers de autenticación en `apps/users/serializers.py`
-- [ ] Crear views de login/logout/register en `apps/users/views.py`
-- [ ] Configurar URLs de autenticación en `apps/users/urls.py`
+- [x] Crear serializers de autenticación en `apps/users/serializers.py`
+- [x] Crear views de login/logout/register en `apps/users/views.py`
+- [x] Configurar URLs de autenticación en `apps/users/urls.py`
 
 #### 3.3 Sistema de Permisos
-- [ ] Crear `core/permissions.py` con permisos personalizados:
+- [x] Crear `core/permissions.py` con permisos personalizados:
   ```python
   class IsOwnerOrAdmin(permissions.BasePermission):
       def has_object_permission(self, request, view, obj):
           # Lógica de permisos
   ```
-- [ ] Implementar `IsAdminOrSuperAdmin` permission
-- [ ] Implementar `IsSuperAdmin` permission
-- [ ] Probar permisos con diferentes roles
+- [x] Implementar `IsAdminOrSuperAdmin` permission
+- [x] Implementar `IsSuperAdmin` permission
+- [x] Probar permisos con diferentes roles
 
 ---
 
