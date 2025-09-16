@@ -295,6 +295,10 @@ test_*.py
 # Archivos de migración temporal (si los hay)
 **/migrations/0*_temp.py
 
+# Archivos de Node.js en la raíz (solo deben estar en frontend/)
+/package.json
+/package-lock.json
+
 # ===== ARCHIVOS DE MEDIOS SUBIDOS =====
 media/
 uploads/
