@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { useAuth } from '@/contexts/AuthContext';
+import UnauthorizedPage from '@/pages/UnauthorizedPage';
 
 /**
  * 🛡️ COMPONENTE DE RUTA PROTEGIDA
@@ -57,36 +58,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Verificar roles si se especifican
   if (requiredRole && user && !requiredRole.includes(user.role)) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center text-red-600">
-              🚫 Acceso Denegado
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-gray-600">
-              No tienes permisos para acceder a esta página.
-            </p>
-            <p className="text-sm text-gray-500">
-              Tu rol actual: <span className="font-medium">{user?.role}</span>
-            </p>
-            <p className="text-sm text-gray-500">
-              Roles requeridos: <span className="font-medium">{requiredRole.join(', ')}</span>
-            </p>
-            <div className="pt-4">
-              <Button 
-                variant="primary" 
-                onClick={() => window.history.back()}
-              >
-                ← Volver
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <UnauthorizedPage />;
   }
 
   // Si todo está bien, renderizar el contenido protegido
@@ -108,7 +80,7 @@ const PublicRoute: React.FC<PublicRouteProps> = ({
   children, 
   redirectTo = '/dashboard' 
 }) => {
-  const { isAuthenticated, isLoading } = useAuthSimulated();
+  const { isAuthenticated, isLoading } = useAuth();
 
   // Mostrar loading mientras se verifica la autenticación
   if (isLoading) {

@@ -1,135 +1,104 @@
-// 🔐 Context de Autenticación
-
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { toast } from 'react-hot-toast';
 import { authService, tokenUtils } from '@/services/authService';
-import type {
-  User,
-  LoginData,
-  RegisterData,
-  AuthState,
-  UpdateProfileData,
-  ChangePasswordData
-} from '@/types/auth';
+import type { User, LoginData, RegisterData, UpdateProfileData, ChangePasswordData } from '@/types/auth';
 
-/**
- * Interface del contexto de autenticación
- */
-interface AuthContextType {
-  // Estado
+// Tipos del contexto
+interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  
-  // Acciones
+}
+
+interface AuthContextType extends AuthState {
   login: (loginData: LoginData) => Promise<void>;
   register: (registerData: RegisterData) => Promise<void>;
-  logout: () => Promise<void>;
-  updateProfile: (profileData: UpdateProfileData) => Promise<void>;
-  changePassword: (passwordData: ChangePasswordData) => Promise<void>;
+  logout: () => void;
+  updateProfile: (data: UpdateProfileData) => Promise<void>;
+  changePassword: (data: ChangePasswordData) => Promise<void>;
   clearError: () => void;
   refreshUserProfile: () => Promise<void>;
 }
 
-/**
- * Tipos de acciones para el reducer
- */
+// Acciones del reducer
 type AuthAction =
   | { type: 'AUTH_START' }
   | { type: 'AUTH_SUCCESS'; payload: User }
   | { type: 'AUTH_ERROR'; payload: string }
-  | { type: 'AUTH_LOGOUT' }
-  | { type: 'CLEAR_ERROR' }
-  | { type: 'UPDATE_USER'; payload: User };
+  | { type: 'LOGOUT' }
+  | { type: 'UPDATE_USER'; payload: User }
+  | { type: 'CLEAR_ERROR' };
 
-/**
- * Estado inicial
- */
+// Estado inicial
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
-  isLoading: true, // Inicialmente true para verificar sesión existente
-  error: null
+  isLoading: false,
+  error: null,
 };
 
-/**
- * Reducer para manejar el estado de autenticación
- */
+// Reducer
 const authReducer = (state: AuthState, action: AuthAction): AuthState => {
   switch (action.type) {
     case 'AUTH_START':
       return {
         ...state,
         isLoading: true,
-        error: null
+        error: null,
       };
-    
     case 'AUTH_SUCCESS':
       return {
         ...state,
         user: action.payload,
         isAuthenticated: true,
         isLoading: false,
-        error: null
+        error: null,
       };
-    
     case 'AUTH_ERROR':
       return {
         ...state,
         user: null,
         isAuthenticated: false,
         isLoading: false,
-        error: action.payload
+        error: action.payload,
       };
-    
-    case 'AUTH_LOGOUT':
+    case 'LOGOUT':
       return {
         ...state,
         user: null,
         isAuthenticated: false,
         isLoading: false,
-        error: null
+        error: null,
       };
-    
-    case 'CLEAR_ERROR':
-      return {
-        ...state,
-        error: null
-      };
-    
     case 'UPDATE_USER':
       return {
         ...state,
-        user: action.payload
+        user: action.payload,
       };
-    
+    case 'CLEAR_ERROR':
+      return {
+        ...state,
+        error: null,
+      };
     default:
       return state;
   }
 };
 
-/**
- * Crear el contexto
- */
+// Crear contexto
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-/**
- * Props del provider
- */
+// Props del provider
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-/**
- * Provider del contexto de autenticación
- */
+// Provider del contexto
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  /**
-   * Verificar sesión existente al cargar la aplicación
-   */
+  // Inicializar autenticación
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -137,58 +106,58 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const refreshToken = tokenUtils.getRefreshToken();
         
         if (accessToken && refreshToken) {
-          // Verificar si el token es válido
           const isValid = await authService.verifyToken(accessToken);
           
           if (isValid) {
-            // Obtener perfil del usuario
             const user = await authService.getProfile();
             dispatch({ type: 'AUTH_SUCCESS', payload: user });
           } else {
-            // Intentar renovar el token
             try {
               const authResponse = await authService.refreshToken(refreshToken);
               tokenUtils.saveTokens(authResponse.accessToken, authResponse.refreshToken);
+              localStorage.setItem('user', JSON.stringify(authResponse.user));
               dispatch({ type: 'AUTH_SUCCESS', payload: authResponse.user });
-            } catch (error) {
-              // Token de refresco también expiró
+            } catch (refreshError) {
               tokenUtils.clearTokens();
-              dispatch({ type: 'AUTH_LOGOUT' });
+              localStorage.removeItem('user');
+              dispatch({ type: 'LOGOUT' });
             }
           }
         } else {
-          // No hay tokens guardados
-          dispatch({ type: 'AUTH_LOGOUT' });
+          const savedUser = localStorage.getItem('user');
+          if (savedUser) {
+            localStorage.removeItem('user');
+          }
+          dispatch({ type: 'LOGOUT' });
         }
       } catch (error) {
         console.error('Error al inicializar autenticación:', error);
         tokenUtils.clearTokens();
-        dispatch({ type: 'AUTH_LOGOUT' });
+        localStorage.removeItem('user');
+        dispatch({ type: 'LOGOUT' });
       }
     };
 
     initializeAuth();
   }, []);
 
-  /**
-   * Función de login
-   */
+  // Función de login
   const login = async (loginData: LoginData): Promise<void> => {
     try {
+      console.log('🔐 Iniciando login con:', { email: loginData.email });
       dispatch({ type: 'AUTH_START' });
       
       const authResponse = await authService.login(loginData);
+      console.log('✅ Login exitoso, respuesta:', authResponse);
       
-      // Guardar tokens
       tokenUtils.saveTokens(authResponse.accessToken, authResponse.refreshToken);
-      
-      // Guardar usuario en localStorage para persistencia
       localStorage.setItem('user', JSON.stringify(authResponse.user));
       
       dispatch({ type: 'AUTH_SUCCESS', payload: authResponse.user });
       
       toast.success(`¡Bienvenido/a, ${authResponse.user.firstName}!`);
     } catch (error: any) {
+      console.error('❌ Error en login:', error);
       const errorMessage = error.message || 'Error al iniciar sesión';
       dispatch({ type: 'AUTH_ERROR', payload: errorMessage });
       toast.error(errorMessage);
@@ -196,91 +165,90 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  /**
-   * Función de registro
-   */
+  // Función de registro
   const register = async (registerData: RegisterData): Promise<void> => {
     try {
+      console.log('🔄 Iniciando registro en AuthContext...');
       dispatch({ type: 'AUTH_START' });
       
       const authResponse = await authService.register(registerData);
+      console.log('✅ Registro exitoso en AuthContext:', authResponse);
       
-      // Guardar tokens
       tokenUtils.saveTokens(authResponse.accessToken, authResponse.refreshToken);
-      
-      // Guardar usuario en localStorage
       localStorage.setItem('user', JSON.stringify(authResponse.user));
       
       dispatch({ type: 'AUTH_SUCCESS', payload: authResponse.user });
       
-      toast.success(`¡Registro exitoso! Bienvenido/a, ${authResponse.user.firstName}!`);
+      console.log('🎉 Usuario registrado y autenticado exitosamente');
+      toast.success(`¡Bienvenido/a, ${authResponse.user.firstName}! Tu cuenta ha sido creada exitosamente.`);
     } catch (error: any) {
-      const errorMessage = error.message || 'Error al registrar usuario';
+      console.error('❌ Error en AuthContext.register:', error);
+      
+      const errorMessage = error.message || 'Error al registrarse';
       dispatch({ type: 'AUTH_ERROR', payload: errorMessage });
       toast.error(errorMessage);
       throw error;
     }
   };
 
-  /**
-   * Función de logout
-   */
-  const logout = async (): Promise<void> => {
+  // Función de logout
+  const logout = (): void => {
     try {
-      await authService.logout();
-    } catch (error) {
-      console.warn('Error al cerrar sesión en el servidor:', error);
-    } finally {
-      // Limpiar tokens y estado local
+      authService.logout();
       tokenUtils.clearTokens();
-      dispatch({ type: 'AUTH_LOGOUT' });
+      localStorage.removeItem('user');
+      dispatch({ type: 'LOGOUT' });
       toast.success('Sesión cerrada exitosamente');
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      tokenUtils.clearTokens();
+      localStorage.removeItem('user');
+      dispatch({ type: 'LOGOUT' });
     }
   };
 
-  /**
-   * Actualizar perfil
-   */
-  const updateProfile = async (profileData: UpdateProfileData): Promise<void> => {
+  // Función para actualizar perfil
+  const updateProfile = async (data: UpdateProfileData): Promise<void> => {
     try {
-      const updatedUser = await authService.updateProfile(profileData);
+      dispatch({ type: 'AUTH_START' });
       
-      // Actualizar usuario en localStorage
+      const updatedUser = await authService.updateProfile(data);
+      
       localStorage.setItem('user', JSON.stringify(updatedUser));
-      
       dispatch({ type: 'UPDATE_USER', payload: updatedUser });
+      
       toast.success('Perfil actualizado exitosamente');
     } catch (error: any) {
       const errorMessage = error.message || 'Error al actualizar perfil';
+      dispatch({ type: 'AUTH_ERROR', payload: errorMessage });
       toast.error(errorMessage);
       throw error;
     }
   };
 
-  /**
-   * Cambiar contraseña
-   */
-  const changePassword = async (passwordData: ChangePasswordData): Promise<void> => {
+  // Función para cambiar contraseña
+  const changePassword = async (data: ChangePasswordData): Promise<void> => {
     try {
-      await authService.changePassword(passwordData);
+      dispatch({ type: 'AUTH_START' });
+      
+      await authService.changePassword(data);
+      
+      dispatch({ type: 'CLEAR_ERROR' });
       toast.success('Contraseña cambiada exitosamente');
     } catch (error: any) {
       const errorMessage = error.message || 'Error al cambiar contraseña';
+      dispatch({ type: 'AUTH_ERROR', payload: errorMessage });
       toast.error(errorMessage);
       throw error;
     }
   };
 
-  /**
-   * Limpiar error
-   */
+  // Función para limpiar errores
   const clearError = (): void => {
     dispatch({ type: 'CLEAR_ERROR' });
   };
 
-  /**
-   * Refrescar perfil del usuario
-   */
+  // Función para refrescar perfil
   const refreshUserProfile = async (): Promise<void> => {
     try {
       const user = await authService.getProfile();
@@ -291,17 +259,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  /**
-   * Valor del contexto
-   */
+  // Valor del contexto
   const contextValue: AuthContextType = {
-    // Estado
     user: state.user,
     isAuthenticated: state.isAuthenticated,
     isLoading: state.isLoading,
     error: state.error,
-    
-    // Acciones
     login,
     register,
     logout,
@@ -318,9 +281,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
 };
 
-/**
- * Hook para usar el contexto de autenticación
- */
+// Hook para usar el contexto
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   
@@ -331,9 +292,7 @@ export const useAuth = (): AuthContextType => {
   return context;
 };
 
-/**
- * Hook para verificar si el usuario tiene un rol específico
- */
+// Hook para verificar roles
 export const useRole = (requiredRole: string | string[]): boolean => {
   const { user } = useAuth();
   
@@ -346,9 +305,7 @@ export const useRole = (requiredRole: string | string[]): boolean => {
   return user.role === requiredRole;
 };
 
-/**
- * Hook para verificar permisos
- */
+// Hook para permisos
 export const usePermissions = () => {
   const { user } = useAuth();
   
@@ -362,4 +319,4 @@ export const usePermissions = () => {
   };
 };
 
-export default AuthContext;
+export { AuthContext };

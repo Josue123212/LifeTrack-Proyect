@@ -27,13 +27,17 @@ class Patient(models.Model):
     
     # Información personal adicional
     date_of_birth = models.DateField(
-        verbose_name='Fecha de nacimiento'
+        verbose_name='Fecha de nacimiento',
+        null=True,
+        blank=True
     )
     
     gender = models.CharField(
         max_length=1,
         choices=GENDER_CHOICES,
-        verbose_name='Género'
+        verbose_name='Género',
+        null=True,
+        blank=True
     )
     
     phone_regex = RegexValidator(
@@ -44,11 +48,15 @@ class Patient(models.Model):
     phone_number = models.CharField(
         validators=[phone_regex],
         max_length=17,
-        verbose_name='Número de teléfono'
+        verbose_name='Número de teléfono',
+        null=True,
+        blank=True
     )
     
     address = models.TextField(
-        verbose_name='Dirección'
+        verbose_name='Dirección',
+        null=True,
+        blank=True
     )
     
     # Información médica
@@ -80,18 +88,24 @@ class Patient(models.Model):
     # Contacto de emergencia
     emergency_contact_name = models.CharField(
         max_length=100,
-        verbose_name='Nombre del contacto de emergencia'
+        verbose_name='Nombre del contacto de emergencia',
+        null=True,
+        blank=True
     )
     
     emergency_contact_phone = models.CharField(
         validators=[phone_regex],
         max_length=17,
-        verbose_name='Teléfono del contacto de emergencia'
+        verbose_name='Teléfono del contacto de emergencia',
+        null=True,
+        blank=True
     )
     
     emergency_contact_relationship = models.CharField(
         max_length=50,
-        verbose_name='Relación con el contacto de emergencia'
+        verbose_name='Relación con el contacto de emergencia',
+        null=True,
+        blank=True
     )
     
     # Metadatos

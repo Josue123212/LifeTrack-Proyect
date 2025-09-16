@@ -16,7 +16,10 @@ from .serializers import (
     UserRegistrationSerializer,
     UserSerializer,
     UserProfileSerializer,
-    ChangePasswordSerializer
+    ChangePasswordSerializer,
+    PasswordResetRequestSerializer,
+    PasswordResetVerifySerializer,
+    PasswordResetConfirmSerializer
 )
 
 
@@ -36,6 +39,9 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         try:
             serializer.is_valid(raise_exception=True)
         except Exception as e:
+            # Debug: imprimir el error completo
+            print(f"Error en login: {type(e).__name__}: {str(e)}")
+            print(f"Datos recibidos: {request.data}")
             return Response(
                 {
                     'error': 'Credenciales inválidas',
@@ -635,3 +641,74 @@ class UserViewSet(viewsets.ModelViewSet):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class PasswordResetRequestView(APIView):
+    """
+    Vista para solicitar recuperación de contraseña.
+    """
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        """
+        Solicitar recuperación de contraseña.
+        """
+        serializer = PasswordResetRequestSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        
+        if serializer.is_valid():
+            result = serializer.save()
+            return Response(result, status=status.HTTP_200_OK)
+        
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+class PasswordResetVerifyView(APIView):
+    """
+    Vista para verificar token de recuperación.
+    """
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        """
+        Verificar si un token de recuperación es válido.
+        """
+        serializer = PasswordResetVerifySerializer(data=request.data)
+        
+        if serializer.is_valid():
+            return Response(
+                {'message': 'Token válido'},
+                status=status.HTTP_200_OK
+            )
+        
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+class PasswordResetConfirmView(APIView):
+    """
+    Vista para confirmar nueva contraseña con token.
+    """
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        """
+        Confirmar nueva contraseña usando token de recuperación.
+        """
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            result = serializer.save()
+            return Response(result, status=status.HTTP_200_OK)
+        
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )

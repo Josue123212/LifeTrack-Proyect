@@ -1,6 +1,7 @@
 """Base settings for config project."""
 
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -106,8 +107,12 @@ REST_FRAMEWORK = {
 
 # CORS configuration
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React development server
+    "http://localhost:3000",  # React development server (Create React App)
     "http://127.0.0.1:3000",
+    "http://localhost:5173",  # Vite development server
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",  # Vite development server (puerto alternativo)
+    "http://127.0.0.1:5174",
 ]
 
 # Simple JWT configuration
@@ -121,7 +126,7 @@ SIMPLE_JWT = {
     'UPDATE_LAST_LOGIN': True,
     
     'ALGORITHM': 'HS256',
-    'SIGNING_KEY': None,  # Will use SECRET_KEY by default
+    'SIGNING_KEY': 'django-insecure-t#fkef&44+2d-y257r4n@v8)06!=@&ol7&rag@5+$rc#pd)#z=',  # Explicit signing key
     'VERIFYING_KEY': None,
     'AUDIENCE': None,
     'ISSUER': None,
@@ -184,17 +189,16 @@ CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 # =============================================================================
 
 # Email Backend Configuration
-# Para desarrollo: usar console backend
-# Para producción: usar SMTP backend
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Para desarrollo: usar console backend (comentado para usar Gmail)
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# SMTP Configuration (para producción)
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'  # o tu servidor SMTP
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'tu-email@gmail.com'
-# EMAIL_HOST_PASSWORD = 'tu-password-de-aplicacion'
+# SMTP Configuration para Gmail (ACTIVADO)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'josue.choquepuma@tecsup.edu.pe'
+EMAIL_HOST_PASSWORD = 'juvz zunn ingu czjj'
 
 # Email Settings
 DEFAULT_FROM_EMAIL = 'Sistema de Citas Médicas <noreply@citasmedicas.com>'
@@ -204,3 +208,6 @@ EMAIL_SUBJECT_PREFIX = '[Citas Médicas] '
 # Email Templates Configuration
 EMAIL_TIMEOUT = 60  # segundos
 EMAIL_USE_LOCALTIME = True
+
+# Frontend URL Configuration
+FRONTEND_URL = 'http://localhost:3000'  # URL del frontend React

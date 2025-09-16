@@ -6,28 +6,52 @@ import HomePage from '@/pages/HomePage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import DashboardPage from '@/pages/DashboardPage';
+import UnauthorizedPage from '@/pages/UnauthorizedPage';
+import ClientDashboard from '@/pages/dashboard/ClientDashboard';
+import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
+import ResetPasswordPage from '@/pages/ResetPasswordPage';
 
 // Components
 import { ProtectedRoute, PublicRoute } from '@/components/auth/ProtectedRoute';
+import { useRoleRedirect } from '@/lib/hooks/useRoleRedirect';
 
 // Test Components (para desarrollo)
 import TestComponent from '@/components/TestComponent';
 import UILibrariesTest from '@/components/UILibrariesTest';
 import UIComponentsTest from '@/components/UIComponentsTest';
 import ReactQueryTest from '@/components/ReactQueryTest';
+import RoleTestComponent from '@/components/RoleTestComponent';
 
 /**
  * 🚀 APLICACIÓN PRINCIPAL
  * 
  * Configuración del router principal con rutas protegidas y públicas.
  * Incluye páginas principales del sistema de citas médicas.
+ * 
+ * Características:
+ * - Rutas protegidas por rol
+ * - Redirección automática según permisos
+ * - Manejo de acceso no autorizado
  */
 function App() {
   return (
     <BrowserRouter>
-      <div className="App">
-        {/* Configuración de Rutas */}
-        <Routes>
+      <AppRoutes />
+    </BrowserRouter>
+  );
+}
+
+/**
+ * Componente interno para manejar las rutas con hooks
+ */
+const AppRoutes: React.FC = () => {
+  // Hook para redirección automática según rol
+  useRoleRedirect();
+
+  return (
+    <div className="App">
+      {/* Configuración de Rutas */}
+      <Routes>
           {/* 🏠 RUTA PRINCIPAL - Página de inicio */}
           <Route path="/" element={<HomePage />} />
           
@@ -50,6 +74,24 @@ function App() {
             } 
           />
           
+          <Route 
+            path="/forgot-password" 
+            element={
+              <PublicRoute>
+                <ForgotPasswordPage />
+              </PublicRoute>
+            } 
+          />
+          
+          <Route 
+            path="/reset-password" 
+            element={
+              <PublicRoute>
+                <ResetPasswordPage />
+              </PublicRoute>
+            } 
+          />
+          
           {/* 🛡️ RUTAS PROTEGIDAS - Requieren autenticación */}
           <Route 
             path="/dashboard" 
@@ -59,6 +101,94 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          
+          {/* 🔐 RUTAS PROTEGIDAS POR ROL - SuperAdmin y Admin */}
+          <Route 
+            path="/admin/dashboard" 
+            element={
+              <ProtectedRoute requiredRole={['superadmin', 'admin']}>
+                <DashboardPage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/admin/users" 
+            element={
+              <ProtectedRoute requiredRole={['superadmin']}>
+                <div className="p-8">Gestión de Usuarios (Solo SuperAdmin)</div>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/admin/doctors" 
+            element={
+              <ProtectedRoute requiredRole={['superadmin', 'admin']}>
+                <div className="p-8">Gestión de Doctores</div>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/admin/patients" 
+            element={
+              <ProtectedRoute requiredRole={['superadmin', 'admin']}>
+                <div className="p-8">Gestión de Pacientes</div>
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* 👨‍⚕️ RUTAS PARA DOCTORES */}
+          <Route 
+            path="/doctor/dashboard" 
+            element={
+              <ProtectedRoute requiredRole={['doctor']}>
+                <div className="p-8">Dashboard del Doctor</div>
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/doctor/appointments" 
+            element={
+              <ProtectedRoute requiredRole={['doctor']}>
+                <div className="p-8">Citas del Doctor</div>
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* 👩‍💼 RUTAS PARA SECRETARIAS */}
+          <Route 
+            path="/secretary/dashboard" 
+            element={
+              <ProtectedRoute requiredRole={['secretary']}>
+                <div className="p-8">Dashboard de Secretaria</div>
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* 👤 RUTAS PARA CLIENTES */}
+          <Route 
+            path="/client/dashboard" 
+            element={
+              <ProtectedRoute requiredRole={['client']}>
+                <ClientDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/client/appointments" 
+            element={
+              <ProtectedRoute requiredRole={['client']}>
+                <div className="p-8">Mis Citas</div>
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* 🚫 PÁGINA DE ACCESO NO AUTORIZADO */}
+          <Route path="/unauthorized" element={<UnauthorizedPage />} />
           
           {/* 🧪 RUTAS DE DESARROLLO - Para testing de componentes */}
           <Route 
@@ -96,6 +226,7 @@ function App() {
               </div>
             } 
           />
+          <Route path="/dev/roles" element={<RoleTestComponent />} />
           
           {/* 🔄 RUTA DE REDIRECCIÓN - Para rutas no encontradas */}
           <Route 
@@ -124,8 +255,7 @@ function App() {
         
         {/* Toaster configurado en main.tsx */}
       </div>
-    </BrowserRouter>
-  );
+    );
 }
 
 export default App

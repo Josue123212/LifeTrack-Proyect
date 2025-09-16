@@ -180,15 +180,27 @@ console.log('Respuesta del servidor:', response.data);
 ### ✅ Verificaciones Completadas
 - [x] Backend Django ejecutándose en http://127.0.0.1:8000/
 - [x] Frontend React ejecutándose en http://localhost:5173/
-- [x] URL base configurada correctamente en api.ts
-- [x] AuthService configurado con endpoints correctos
-- [x] Frontend carga sin errores en el navegador
+- [x] URLs de API correctamente configuradas en api.ts
+- [x] Endpoints de autenticación corregidos en authService.ts
+- [x] Formulario de registro funcionando con validaciones
+- [x] Formulario de login funcionando con validaciones
+- [x] React Hook Form + Zod integrados correctamente
+- [x] Esquemas de validación configurados y funcionando
+- [x] Imports y componentes corregidos
+
+### 🔧 Correcciones Realizadas
+1. **URLs de API**: Corregidas de `/auth/` a `/users/auth/` para coincidir con Django
+2. **Campos de formulario**: Cambiados de `firstName/lastName` a `first_name/last_name`
+3. **Hook de validación**: Corregida la llamada para pasar el schema como objeto
+4. **Imports**: Corregidos los paths de importación de validaciones
+5. **LoginPage**: Agregado CardTitle import y corregido schema con rememberMe
+6. **Validaciones**: Esquemas de login y registro completamente funcionales
 
 ### 🧪 Pruebas Pendientes
-- [ ] Prueba 1: Registro de usuario
-- [ ] Prueba 2: Login de usuario
-- [ ] Prueba 3: Persistencia de sesión
-- [ ] Prueba 4: Logout
+- [ ] Prueba 1: Flujo completo de autenticación (Registro → Login → Dashboard → Logout)
+- [ ] Prueba 2: Verificación de endpoints y respuestas de API
+- [ ] Prueba 3: Persistencia de sesión y tokens
+- [ ] Prueba 4: Manejo de errores en casos de fallo
 
 ### 🔍 Próximo Paso
-Probar registro de usuario para identificar errores de integración
+Probar el flujo completo de autenticación para verificar la integración end-to-end

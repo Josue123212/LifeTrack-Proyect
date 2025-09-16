@@ -31,7 +31,10 @@ export const RegisterPage: React.FC = () => {
     handleSubmit,
     formState: { errors, isValid },
     reset
-  } = useFormValidation(registerSchema);
+  } = useFormValidation({ 
+    schema: registerSchema,
+    mode: 'onSubmit'
+  });
 
   /**
    * 🔐 Maneja el envío del formulario de registro
@@ -41,10 +44,10 @@ export const RegisterPage: React.FC = () => {
       await registerUser({
         email: data.email,
         password: data.password,
+        confirmPassword: data.confirmPassword,
         firstName: data.firstName,
         lastName: data.lastName,
-        phone: data.phone,
-        acceptTerms: data.acceptTerms
+        phone: data.phone
       });
       
       // Redirigir al dashboard después del registro exitoso
@@ -85,203 +88,258 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <Card className="shadow-xl border-0">
-          <CardHeader className="text-center pb-2">
-            <div className="mx-auto w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mb-4">
-              <span className="text-white text-xl font-bold">📝</span>
+    <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Inter, sans-serif' }}>
+      <div className="flex min-h-screen">
+        {/* Header */}
+        <div className="w-full">
+          <header className="bg-white shadow-sm border-b border-gray-200">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-center h-16">
+                <div className="flex items-center space-x-3">
+                  <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center gradient-primary">
+                      <span className="text-white text-sm font-bold">M</span>
+                    </div>
+                    <span className="text-xl font-bold text-gray-900">MediCitas</span>
+                  </Link>
+                  <span className="text-sm text-gray-500 hidden sm:block">• Registro</span>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <Link
+                    to="/login"
+                    className="text-gray-600 hover:text-gray-900 text-sm font-medium transition-colors"
+                  >
+                    Iniciar Sesión
+                  </Link>
+                </div>
+              </div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Crear Cuenta
-            </h1>
-            <p className="text-gray-600 text-sm">
-              Únete a nuestra plataforma médica
-            </p>
-          </CardHeader>
+          </header>
+
+          {/* Main Content */}
+          <div className="flex items-center justify-center px-4 py-8 sm:py-12">
+            <div className="w-full max-w-md lg:max-w-lg">
+              {/* Título de la página */}
+              <div className="text-center mb-8">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+                  Crear Cuenta
+                </h1>
+                <p className="text-gray-600 text-sm sm:text-base">
+                  Únete a nuestra plataforma médica y gestiona tus citas de forma inteligente
+                </p>
+              </div>
           
-          <form onSubmit={handleSubmit(handleRegister)}>
-            <CardContent className="space-y-4">
-              {/* Nombre */}
-              <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-                  Nombre
-                </label>
-                <Input
-                  id="firstName"
-                  type="text"
-                  placeholder="Tu nombre"
-                  {...register('firstName')}
-                  error={errors.firstName?.message}
-                  disabled={isLoading}
-                />
-              </div>
+              {/* Formulario moderno */}
+              <div className="bg-white rounded-xl lg:rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 lg:p-10">
+                <form onSubmit={handleSubmit(handleRegister)} className="space-y-6">
+                  {/* Nombre y Apellido en grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-2">
+                        Nombre
+                      </label>
+                      <Input
+                        id="first_name"
+                        type="text"
+                        placeholder="Tu nombre"
+                        {...register('firstName')}
+                        error={errors.firstName?.message}
+                        disabled={isLoading}
+                        className="focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                      />
+                    </div>
 
-              {/* Apellido */}
-              <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-                  Apellido
-                </label>
-                <Input
-                  id="lastName"
-                  type="text"
-                  placeholder="Tu apellido"
-                  {...register('lastName')}
-                  error={errors.lastName?.message}
-                  disabled={isLoading}
-                />
-              </div>
+                    <div>
+                      <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-2">
+                        Apellido
+                      </label>
+                      <Input
+                        id="last_name"
+                        type="text"
+                        placeholder="Tu apellido"
+                        {...register('lastName')}
+                        error={errors.lastName?.message}
+                        disabled={isLoading}
+                        className="focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                      />
+                    </div>
+                  </div>
 
-              {/* Email */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="tu@email.com"
-                  {...register('email')}
-                  error={errors.email?.message}
-                  disabled={isLoading}
-                />
-              </div>
+                  {/* Email */}
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                      Correo Electrónico
+                    </label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="tu@email.com"
+                      {...register('email')}
+                      error={errors.email?.message}
+                      disabled={isLoading}
+                      className="focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                    />
+                  </div>
 
-              {/* Contraseña */}
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Contraseña
-                </label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    {...register('password')}
-                    error={errors.password?.message}
-                    disabled={isLoading}
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                    onClick={togglePasswordVisibility}
+                  {/* Contraseñas en grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                        Contraseña
+                      </label>
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="••••••••"
+                          {...register('password')}
+                          error={errors.password?.message}
+                          disabled={isLoading}
+                          className="pr-10 focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                        />
+                        <button
+                          type="button"
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 transition-colors"
+                          onClick={togglePasswordVisibility}
+                          aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                        >
+                          {showPassword ? (
+                            <EyeSlashIcon className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <EyeIcon className="h-4 w-4 text-gray-400" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                        Confirmar Contraseña
+                      </label>
+                      <div className="relative">
+                        <Input
+                          id="confirmPassword"
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          placeholder="••••••••"
+                          {...register('confirmPassword')}
+                          error={errors.confirmPassword?.message}
+                          disabled={isLoading}
+                          className="pr-10 focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                        />
+                        <button
+                          type="button"
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 transition-colors"
+                          onClick={toggleConfirmPasswordVisibility}
+                          aria-label={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                        >
+                          {showConfirmPassword ? (
+                            <EyeSlashIcon className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <EyeIcon className="h-4 w-4 text-gray-400" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Términos y Condiciones */}
+                  <div className="flex items-start space-x-3">
+                    <input
+                      id="acceptTerms"
+                      type="checkbox"
+                      {...register('acceptTerms')}
+                      disabled={isLoading}
+                      className="mt-1 h-4 w-4 border-gray-300 rounded focus:ring-2 focus:ring-offset-2 focus:ring-primary text-primary"
+                    />
+                    <label htmlFor="acceptTerms" className="text-sm text-gray-700 leading-relaxed">
+                      Acepto los{' '}
+                      <Link to="/terms" className="underline transition-colors text-primary hover:text-primary-hover">
+                        términos y condiciones
+                      </Link>
+                      {' '}y la{' '}
+                      <Link to="/privacy" className="underline transition-colors text-primary hover:text-primary-hover">
+                        política de privacidad
+                      </Link>
+                    </label>
+                  </div>
+                  {errors.acceptTerms && (
+                    <p className="text-red-500 text-xs mt-1">{errors.acceptTerms.message}</p>
+                  )}
+
+                  {/* Submit Button */}
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    disabled={isLoading || !isValid}
+                    className="w-full focus:ring-2 focus:ring-offset-2 focus:ring-primary bg-primary border-primary hover:bg-primary-hover"
                   >
-                    {showPassword ? (
-                      <EyeSlashIcon className="h-4 w-4 text-gray-400" />
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Creando cuenta...
+                      </>
                     ) : (
-                      <EyeIcon className="h-4 w-4 text-gray-400" />
+                      'Crear Cuenta'
                     )}
-                  </button>
-                </div>
+                  </Button>
+
+                  {/* Divider */}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-200"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">o continúa con</span>
+                    </div>
+                  </div>
+
+                  {/* Social Login */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      onClick={handleGoogleRegister}
+                      disabled={isLoading}
+                      className="focus:ring-2 focus:ring-offset-2 focus:ring-primary border-primary text-primary hover:bg-primary hover:text-white"
+                    >
+                      🌐 Google
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      onClick={handleClearForm}
+                      disabled={isLoading}
+                      className="focus:ring-2 focus:ring-offset-2 focus:ring-primary border-primary text-primary hover:bg-primary hover:text-white"
+                    >
+                      🧹 Limpiar
+                    </Button>
+                  </div>
+                </form>
               </div>
 
-              {/* Confirmar Contraseña */}
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirmar Contraseña
-                </label>
-                <div className="relative">
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    {...register('confirmPassword')}
-                    error={errors.confirmPassword?.message}
-                    disabled={isLoading}
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                    onClick={toggleConfirmPasswordVisibility}
+              {/* Enlaces de navegación */}
+              <div className="text-center space-y-3 mt-6">
+                <p className="text-sm text-gray-600">
+                  ¿Ya tienes cuenta?{' '}
+                  <Link 
+                    to="/login" 
+                    className="font-medium transition-colors text-primary hover:text-primary-hover"
                   >
-                    {showConfirmPassword ? (
-                      <EyeSlashIcon className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <EyeIcon className="h-4 w-4 text-gray-400" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Términos y Condiciones */}
-              <div className="flex items-start space-x-2">
-                <input
-                  id="acceptTerms"
-                  type="checkbox"
-                  {...register('acceptTerms')}
-                  disabled={isLoading}
-                  className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="acceptTerms" className="text-sm text-gray-700">
-                  Acepto los{' '}
-                  <Link to="/terms" className="text-blue-600 hover:text-blue-800 underline">
-                    términos y condiciones
+                    Inicia sesión aquí
                   </Link>
-                  {' '}y la{' '}
-                  <Link to="/privacy" className="text-blue-600 hover:text-blue-800 underline">
-                    política de privacidad
+                </p>
+                <p className="text-sm">
+                  <Link to="/" className="text-gray-500 hover:text-gray-700 transition-colors">
+                    ← Volver al inicio
                   </Link>
-                </label>
-              </div>
-              {errors.acceptTerms && (
-                <p className="text-red-500 text-xs mt-1">{errors.acceptTerms.message}</p>
-              )}
-
-              {/* Quick Access Buttons */}
-              <div className="flex gap-2 justify-center">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleGoogleRegister}
-                  disabled={isLoading}
-                >
-                  🌐 Google
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearForm}
-                  disabled={isLoading}
-                >
-                  🧹 Limpiar
-                </Button>
-              </div>
-            </CardContent>
-            
-            <div className="px-6 pb-6">
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                disabled={isLoading || !isValid}
-                className="w-full"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Creando cuenta...
-                  </>
-                ) : (
-                  'Crear Cuenta'
-                )}
-              </Button>
-              
-              <div className="text-center text-sm text-gray-600 mt-4">
-                ¿Ya tienes cuenta?{' '}
-                <Link 
-                  to="/login" 
-                  className="text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  Inicia sesión aquí
-                </Link>
+                </p>
               </div>
             </div>
-          </form>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

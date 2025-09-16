@@ -28,7 +28,7 @@ class PatientAdmin(admin.ModelAdmin):
         'user__email',
         'user__first_name',
         'user__last_name',
-        'emergency_contact'
+        'emergency_contact_name'
     ]
     
     readonly_fields = [
@@ -42,13 +42,13 @@ class PatientAdmin(admin.ModelAdmin):
             'fields': ('user',)
         }),
         ('Información Personal', {
-            'fields': ('date_of_birth', 'gender', 'address')
+            'fields': ('date_of_birth', 'gender', 'phone_number', 'address')
         }),
         ('Contacto de Emergencia', {
-            'fields': ('emergency_contact', 'emergency_phone')
+            'fields': ('emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship')
         }),
         ('Información Médica', {
-            'fields': ('medical_history', 'allergies'),
+            'fields': ('blood_type', 'allergies', 'medical_conditions', 'medications'),
             'classes': ('collapse',)
         }),
         ('Metadatos', {

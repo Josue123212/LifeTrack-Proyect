@@ -254,8 +254,8 @@
 
 ### 📱 Fase 5: Layout y Navegación
 
-#### 5.1 Layout Principal
-- [ ] Crear `src/components/layout/Layout.tsx`:
+#### 5.1 Layout Principal ✅ COMPLETADO
+- [x] Crear `src/components/layout/Layout.tsx`: ✅ Implementado con estructura responsive
   ```typescript
   interface LayoutProps {
     children: React.ReactNode;
@@ -264,11 +264,11 @@
   
   const Layout: React.FC<LayoutProps> = ({ children, showSidebar = true }) => {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="flex">
-          {showSidebar && <Sidebar />}
-          <main className="flex-1 p-6">
+      <div className="flex h-screen bg-gray-50">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+          <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
             {children}
           </main>
         </div>
@@ -276,12 +276,12 @@
     );
   };
   ```
-- [ ] Crear componente `Header.tsx` con navegación
-- [ ] Crear componente `Sidebar.tsx` con menú lateral
-- [ ] Implementar navegación responsive
+- [x] Crear componente `Header.tsx` con navegación ✅ Implementado con logo turquesa, notificaciones y menú móvil
+- [x] Crear componente `Sidebar.tsx` con menú lateral ✅ Implementado con navegación responsive y estados activos
+- [x] Implementar navegación responsive ✅ Overlay móvil y sidebar colapsable implementados
 
 #### 5.2 Navegación por Roles
-- [ ] Crear configuración de menús por rol en `src/config/navigation.ts`:
+- [x] Crear configuración de menús por rol en `src/config/navigation.ts`: ✅ Implementado con 5 roles y Google Icons
   ```typescript
   export const navigationConfig = {
     client: [
@@ -299,36 +299,36 @@
     // ... más roles
   };
   ```
-- [ ] Implementar menú dinámico basado en rol
-- [ ] Crear breadcrumbs dinámicos
+- [x] Implementar menú dinámico basado en rol ✅ Hook useNavigation implementado
+- [x] Crear breadcrumbs dinámicos ✅ Componente Breadcrumbs integrado en Layout
 
-#### 5.3 Rutas Protegidas
-- [ ] Crear `src/components/auth/ProtectedRoute.tsx`:
-  ```typescript
-  interface ProtectedRouteProps {
-    children: React.ReactNode;
-    requiredRole?: string[];
-  }
-  
-  const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-    children, 
-    requiredRole 
-  }) => {
-    const { isAuthenticated, user } = useAuth();
-    
-    if (!isAuthenticated) {
-      return <Navigate to="/login" replace />;
-    }
-    
-    if (requiredRole && !requiredRole.includes(user?.role)) {
-      return <Navigate to="/unauthorized" replace />;
-    }
-    
-    return <>{children}</>;
-  };
-  ```
-- [ ] Implementar redirección automática según rol
-- [ ] Crear página de acceso no autorizado
+#### 5.3 Rutas Protegidas por Rol ✅ COMPLETADO
+- [x] **Crear componente `ProtectedRoute.tsx` con verificación de roles** ✅
+  - Componente actualizado con verificación de roles específicos
+  - Integración con `UnauthorizedPage` para acceso denegado
+  - Soporte para múltiples roles por ruta
+
+- [x] **Implementar redirección automática según rol de usuario** ✅
+  - Hook `useRoleRedirect` creado en `/lib/hooks/`
+  - Redirección automática al dashboard correspondiente
+  - Preservación de URL de destino original
+  - Configuración de rutas por defecto por rol
+
+- [x] **Crear página de acceso no autorizado (UnauthorizedPage)** ✅
+  - Diseño responsive con información clara
+  - Botones de navegación según rol del usuario
+  - Verificación de permisos y sugerencias de rutas
+
+- [x] **Actualizar App.tsx con rutas protegidas por rol** ✅
+  - Rutas específicas para cada rol (admin, doctor, secretary, client)
+  - Integración con hook de redirección automática
+  - Ruta `/unauthorized` para acceso denegado
+
+- [x] **Probar navegación con diferentes roles y restricciones** ✅
+  - Componente de prueba `RoleTestComponent` creado
+  - Simulación de login con diferentes roles
+  - Verificación de acceso a rutas protegidas
+  - Ruta de desarrollo `/dev/roles` para testing
 
 ---
 

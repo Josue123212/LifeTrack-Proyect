@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { Layout } from '@/components/layout';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -63,46 +64,30 @@ const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">
-                🏥 Dashboard
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                Bienvenido, {mockData.user.name}
-              </span>
-              <Button variant="outline" onClick={handleLogout}>
-                Cerrar Sesión
-              </Button>
-            </div>
+    <Layout>
+      <div className="space-y-6">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">
+              Dashboard
+            </h1>
+            <p className="text-gray-600">
+              ¡Hola, {mockData.user.name}! Aquí tienes un resumen de tu actividad médica.
+            </p>
+          </div>
+          <div className="mt-4 sm:mt-0">
+            <Button variant="outline" onClick={handleLogout}>
+              Cerrar Sesión
+            </Button>
           </div>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            ¡Hola, {mockData.user.name}! 👋
-          </h2>
-          <p className="text-gray-600">
-            Aquí tienes un resumen de tus citas médicas y acciones disponibles.
-          </p>
-        </div>
-
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
+                <div className="p-2 rounded-lg bg-primary-light">
                   <span className="text-2xl">📅</span>
                 </div>
                 <div className="ml-4">
@@ -118,7 +103,7 @@ const DashboardPage: React.FC = () => {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
+                <div className="p-2 bg-primary-light rounded-lg">
                   <span className="text-2xl">⏰</span>
                 </div>
                 <div className="ml-4">
@@ -134,7 +119,7 @@ const DashboardPage: React.FC = () => {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
+                <div className="p-2 bg-primary-light rounded-lg">
                   <span className="text-2xl">✅</span>
                 </div>
                 <div className="ml-4">
@@ -150,7 +135,7 @@ const DashboardPage: React.FC = () => {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-red-100 rounded-lg">
+                <div className="p-2 bg-primary-light rounded-lg">
                   <span className="text-2xl">❌</span>
                 </div>
                 <div className="ml-4">
@@ -276,8 +261,8 @@ const DashboardPage: React.FC = () => {
             </Link>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </Layout>
   );
 };
 

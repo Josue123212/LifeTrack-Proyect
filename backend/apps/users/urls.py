@@ -15,6 +15,9 @@ from .views import (
     user_info,
     check_email_availability,
     check_username_availability,
+    PasswordResetRequestView,
+    PasswordResetVerifyView,
+    PasswordResetConfirmView,
 )
 
 # Router para ViewSets
@@ -37,6 +40,11 @@ urlpatterns = [
     path('auth/register/', UserRegistrationView.as_view(), name='register'),
     path('profile/', UserProfileView.as_view(), name='profile'),
     path('change-password/', ChangePasswordView.as_view(), name='change_password'),
+    
+    # Recuperación de contraseña
+    path('auth/password-reset/request/', PasswordResetRequestView.as_view(), name='password_reset_request'),
+    path('auth/password-reset/verify/', PasswordResetVerifyView.as_view(), name='password_reset_verify'),
+    path('auth/password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     
     # Información del usuario
     path('me/', user_info, name='user_info'),

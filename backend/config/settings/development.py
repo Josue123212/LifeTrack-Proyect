@@ -26,8 +26,14 @@ INTERNAL_IPS = [
     'localhost',
 ]
 
-# Email backend for development (console)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Email backend for development (console) - COMENTADO para usar Gmail SMTP
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    'apps.users.backends.EmailOrUsernameModelBackend',
+    'django.contrib.auth.backends.ModelBackend',  # Fallback
+]
 
 # Logging configuration for development
 LOGGING = {
