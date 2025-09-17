@@ -8,9 +8,10 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from django.contrib.auth import logout
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 from django.db.models import Q
 
-from .models import User
+from .models import User, PasswordResetToken
 from .serializers import (
     CustomTokenObtainPairSerializer,
     UserRegistrationSerializer,
@@ -681,15 +682,29 @@ class PasswordResetVerifyView(APIView):
         serializer = PasswordResetVerifySerializer(data=request.data)
         
         if serializer.is_valid():
-            return Response(
-                {'message': 'Token válido'},
-                status=status.HTTP_200_OK
-            )
+            # Obtener el token y el usuario asociado
+            token = serializer.validated_data['token']
+            try:
+                reset_token = PasswordResetToken.objects.get(
+                    token=token,
+                    used=False,
+                    expires_at__gt=timezone.now()
+                )
+                return Response({
+                    'valid': True,
+                    'message': 'Token válido',
+                    'user_email': reset_token.user.email
+                }, status=status.HTTP_200_OK)
+            except PasswordResetToken.DoesNotExist:
+                return Response({
+                    'valid': False,
+                    'message': 'Token inválido o expirado'
+                }, status=status.HTTP_400_BAD_REQUEST)
         
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({
+            'valid': False,
+            'message': 'Token inválido o expirado'
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PasswordResetConfirmView(APIView):

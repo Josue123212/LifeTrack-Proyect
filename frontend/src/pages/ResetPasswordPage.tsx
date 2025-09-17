@@ -114,7 +114,8 @@ export default function ResetPasswordPage() {
         '/users/auth/password-reset/confirm/',
         {
           token,
-          password: data.password,
+          new_password: data.password,
+          new_password_confirm: data.confirmPassword,
         }
       );
 
@@ -131,8 +132,10 @@ export default function ResetPasswordPage() {
       
       if (error.response?.data?.token) {
         toast.error(error.response.data.token[0]);
-      } else if (error.response?.data?.password) {
-        toast.error(error.response.data.password[0]);
+      } else if (error.response?.data?.new_password) {
+        toast.error(error.response.data.new_password[0]);
+      } else if (error.response?.data?.new_password_confirm) {
+        toast.error(error.response.data.new_password_confirm[0]);
       } else if (error.response?.data?.detail) {
         toast.error(error.response.data.detail);
       } else {

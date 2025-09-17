@@ -210,4 +210,4 @@ EMAIL_TIMEOUT = 60  # segundos
 EMAIL_USE_LOCALTIME = True
 
 # Frontend URL Configuration
-FRONTEND_URL = 'http://localhost:3000'  # URL del frontend React
+FRONTEND_URL = 'http://localhost:5174'  # URL del frontend React
