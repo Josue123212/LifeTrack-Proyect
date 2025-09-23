@@ -1,5 +1,8 @@
 // Exportaciones centralizadas de todos los componentes UI
 
+// Badge Component
+export { Badge } from './Badge';
+
 // Button Component
 export { Button, buttonVariants } from './Button';
 export type { ButtonProps } from './Button';

@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import sys
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -30,7 +31,7 @@ SECRET_KEY = 'django-insecure-t#fkef&44+2d-y257r4n@v8)06!=@&ol7&rag@5+$rc#pd)#z=
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 
 
 # Application definition
@@ -46,27 +47,31 @@ INSTALLED_APPS = [
     # Third party apps
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'drf_spectacular',
     'django_filters',
     
     # Local apps
     'core',  # Core functionality and logging hooks
-    'apps.core',
     'apps.users',
     'apps.patients',
     'apps.doctors',
     'apps.appointments',
     'apps.reports',
+    'apps.notifications',
 ]
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
+    'core.middleware.SecurityHeadersMiddleware',  # Headers de seguridad
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     # 'django.middleware.csrf.CsrfViewMiddleware',  # Comentado temporalmente para pruebas
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.RoleBasedRateLimitMiddleware',  # Rate limiting por rol
+    'core.middleware.RoleBasedLoggingMiddleware',  # Logging de acciones por rol
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -222,7 +227,44 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 
-# For development only - allows all origins
+# CORS Headers Configuration
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False  # Solo para desarrollo, usar CORS_ALLOWED_ORIGINS en producción
+
+# CSRF Configuration
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000", 
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+CSRF_COOKIE_SECURE = False  # Solo para desarrollo
+CSRF_COOKIE_HTTPONLY = False  # Permitir acceso desde JavaScript
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Headers permitidos
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# Métodos permitidos
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
 
 # Logging Configuration
 LOGGING = {
@@ -284,4 +326,76 @@ LOGGING = {
         },
     },
 }
+
+# Frontend URL Configuration
+# URL del frontend para generar enlaces en emails
+FRONTEND_URL = 'http://localhost:5173'
+
+# Google OAuth Configuration
+GOOGLE_OAUTH2_CLIENT_ID = config('GOOGLE_OAUTH2_CLIENT_ID', default='your-google-client-id-here.apps.googleusercontent.com')
+GOOGLE_OAUTH2_CLIENT_SECRET = config('GOOGLE_OAUTH2_CLIENT_SECRET', default='your-google-client-secret-here')
+
 # CORS_ALLOW_ALL_ORIGINS = True
+
+# ===================================
+# CONFIGURACIÓN DEL MIDDLEWARE DE ROLES
+# ===================================
+
+# Rate Limiting Configuration
+RATE_LIMIT_SETTINGS = {
+    'admin': {
+        'requests_per_minute': 1000,  # Administradores tienen límite alto
+        'requests_per_hour': 10000,
+    },
+    'doctor': {
+        'requests_per_minute': 200,   # Doctores tienen límite moderado
+        'requests_per_hour': 2000,
+    },
+    'secretary': {
+        'requests_per_minute': 100,   # Secretarias tienen límite moderado
+        'requests_per_hour': 1000,
+    },
+    'patient': {
+        'requests_per_minute': 50,    # Pacientes tienen límite más bajo
+        'requests_per_hour': 500,
+    },
+    'anonymous': {
+        'requests_per_minute': 10,    # Usuarios anónimos muy limitados
+        'requests_per_hour': 100,
+    }
+}
+
+# Audit Trail Configuration
+AUDIT_SETTINGS = {
+    'ENABLED': True,
+    'LOG_ANONYMOUS_USERS': True,
+    'LOG_GET_REQUESTS': False,  # No loggear GET requests por defecto
+    'LOG_SENSITIVE_DATA': False,  # No loggear datos sensibles
+    'SENSITIVE_FIELDS': [
+        'password', 'token', 'secret', 'key', 'auth',
+        'credit_card', 'ssn', 'social_security'
+    ],
+    'CRITICAL_ACTIONS': ['delete', 'create', 'update'],
+    'CRITICAL_RESOURCES': ['users', 'admin', 'system', 'permissions'],
+    'RETENTION_DAYS': 90,  # Mantener logs por 90 días
+}
+
+# Security Headers Configuration
+SECURITY_HEADERS = {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
+    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';",
+}
+
+# Middleware Logging Configuration
+MIDDLEWARE_LOGGING = {
+    'LOG_REQUESTS': True,
+    'LOG_RESPONSES': True,
+    'LOG_PERFORMANCE': True,
+    'PERFORMANCE_THRESHOLD_MS': 1000,  # Log requests que tomen más de 1 segundo
+    'LOG_RATE_LIMIT_VIOLATIONS': True,
+    'LOG_SECURITY_EVENTS': True,
+}

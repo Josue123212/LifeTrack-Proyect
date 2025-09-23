@@ -4,6 +4,7 @@ from rest_framework_simplejwt.views import TokenVerifyView
 
 from .views import (
     UserViewSet,
+    SecretaryViewSet,
     CustomTokenObtainPairView,
     CustomTokenRefreshView,
     LogoutView,
@@ -19,10 +20,12 @@ from .views import (
     PasswordResetVerifyView,
     PasswordResetConfirmView,
 )
+# from .oauth_views import google_auth  # Comentado temporalmente para pruebas
 
 # Router para ViewSets
 router = DefaultRouter()
 router.register(r'users', UserViewSet, basename='user')
+router.register(r'secretaries', SecretaryViewSet, basename='secretary')
 
 app_name = 'users'
 
@@ -35,6 +38,9 @@ urlpatterns = [
     path('auth/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('auth/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
+    
+    # OAuth con Google
+    # path('auth/google/', google_auth, name='google_auth'),  # Comentado temporalmente
     
     # Registro y gestión de usuarios
     path('auth/register/', UserRegistrationView.as_view(), name='register'),
@@ -68,6 +74,13 @@ Estructura de URLs resultante:
 /api/users/{id}/change_password/ - POST (acción personalizada)
 /api/users/check_email/         - POST (acción personalizada)
 /api/users/check_username/      - POST (acción personalizada)
+
+# Secretary Routes
+/api/secretaries/               - GET (list), POST (create)
+/api/secretaries/{id}/          - GET (retrieve), PUT (update), PATCH (partial_update), DELETE (destroy)
+/api/secretaries/me/            - GET (perfil actual), PUT/PATCH (actualizar perfil)
+/api/secretaries/dashboard/     - GET (dashboard con estadísticas)
+/api/secretaries/appointments/  - GET (listar citas), POST (crear cita)
 
 # Authentication Routes
 /auth/login/                    - POST (obtener tokens)

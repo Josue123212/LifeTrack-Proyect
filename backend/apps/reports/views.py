@@ -10,7 +10,7 @@ import csv
 from apps.appointments.models import Appointment
 from apps.doctors.models import Doctor
 from apps.patients.models import Patient
-from core.permissions import IsAdminOrSuperAdmin
+from core.permissions import IsAdminOrSuperAdmin, IsDoctor, IsSecretary, IsClient
 from .serializers import (
     BasicStatsSerializer,
     AppointmentsByPeriodSerializer,
@@ -452,6 +452,536 @@ def export_appointments_csv(request):
         ])
     
     return response
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def superadmin_dashboard(request):
+    """
+    🎯 OBJETIVO: Dashboard específico para SuperAdministradores
+    
+    💡 CONCEPTO: Proporciona métricas avanzadas del sistema,
+    gestión de usuarios y estadísticas globales.
+    """
+    from apps.users.models import User
+    from django.db import connection
+    
+    # Verificar que el usuario sea SuperAdmin
+    if request.user.role != 'superadmin':
+        return Response(
+            {'error': 'Solo SuperAdministradores pueden acceder a este endpoint'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    today = timezone.now().date()
+    week_start = today - timedelta(days=today.weekday())
+    month_start = today.replace(day=1)
+    
+    # Estadísticas del sistema
+    total_users = User.objects.count()
+    total_patients = Patient.objects.count()
+    total_doctors = Doctor.objects.count()
+    total_appointments = Appointment.objects.count()
+    
+    # Actividad diaria (citas de hoy)
+    daily_activity = Appointment.objects.filter(date=today).count()
+    
+    # Calcular uptime del sistema (simulado - en producción sería real)
+    system_uptime = 99.8
+    
+    # Uso de base de datos (simulado)
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) FROM django_session")
+        active_sessions = cursor.fetchone()[0]
+    
+    # Calcular porcentaje de uso de BD (simulado)
+    database_usage = min(67.3 + (active_sessions * 0.1), 100)
+    
+    # Usuarios por rol
+    users_by_role = User.objects.values('role').annotate(count=Count('id'))
+    
+    # Actividad reciente de usuarios
+    recent_users = User.objects.filter(
+        last_login__gte=today - timedelta(days=7)
+    ).order_by('-last_login')[:10]
+    
+    # Estadísticas de citas por estado
+    appointment_stats = Appointment.objects.values('status').annotate(count=Count('id'))
+    
+    # Crecimiento mensual
+    last_month = month_start - timedelta(days=1)
+    last_month_start = last_month.replace(day=1)
+    
+    users_this_month = User.objects.filter(date_joined__gte=month_start).count()
+    users_last_month = User.objects.filter(
+        date_joined__gte=last_month_start,
+        date_joined__lt=month_start
+    ).count()
+    
+    appointments_this_month = Appointment.objects.filter(date__gte=month_start).count()
+    appointments_last_month = Appointment.objects.filter(
+        date__gte=last_month_start,
+        date__lt=month_start
+    ).count()
+    
+    # Calcular porcentajes de crecimiento
+    user_growth = 0
+    if users_last_month > 0:
+        user_growth = ((users_this_month - users_last_month) / users_last_month) * 100
+    
+    appointment_growth = 0
+    if appointments_last_month > 0:
+        appointment_growth = ((appointments_this_month - appointments_last_month) / appointments_last_month) * 100
+    
+    # Preparar datos de respuesta
+    dashboard_data = {
+        'system_overview': {
+            'total_users': total_users,
+            'total_patients': total_patients,
+            'total_doctors': total_doctors,
+            'total_appointments': total_appointments,
+            'system_uptime': system_uptime,
+            'daily_activity': daily_activity,
+            'database_usage': database_usage,
+            'active_sessions': active_sessions
+        },
+        'users_by_role': {item['role']: item['count'] for item in users_by_role},
+        'appointment_stats': {item['status']: item['count'] for item in appointment_stats},
+        'growth_metrics': {
+            'users_this_month': users_this_month,
+            'users_last_month': users_last_month,
+            'user_growth_percentage': round(user_growth, 2),
+            'appointments_this_month': appointments_this_month,
+            'appointments_last_month': appointments_last_month,
+            'appointment_growth_percentage': round(appointment_growth, 2)
+        },
+        'recent_users': [
+            {
+                'id': user.id,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'role': user.role,
+                'is_active': user.is_active,
+                'last_login': user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else None,
+                'date_joined': user.date_joined.strftime('%Y-%m-%d')
+            }
+            for user in recent_users
+        ]
+    }
+    
+    return Response(dashboard_data, status=status.HTTP_200_OK)
+
+
+# =============================================================================
+# 🎯 DASHBOARD ENDPOINTS ESPECÍFICOS POR ROL
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsDoctor])
+def doctor_dashboard(request):
+    """
+    🎯 OBJETIVO: Dashboard específico para doctores
+    
+    💡 CONCEPTO: Proporciona estadísticas personalizadas para el doctor
+    autenticado, incluyendo sus citas, pacientes y métricas de rendimiento.
+    """
+    try:
+        # Obtener el perfil del doctor autenticado
+        doctor = request.user.doctor_profile
+        today = timezone.now().date()
+        week_start = today - timedelta(days=today.weekday())
+        month_start = today.replace(day=1)
+        
+        # Estadísticas básicas del doctor
+        stats = {
+            'doctor_info': {
+                'id': doctor.id,
+                'name': f"{doctor.user.first_name} {doctor.user.last_name}",
+                'specialization': doctor.specialization,
+                'medical_license': doctor.medical_license,
+                'years_experience': doctor.years_experience,
+                'is_available': doctor.is_available
+            },
+            'appointments': {
+                'total': Appointment.objects.filter(doctor=doctor).count(),
+                'today': Appointment.objects.filter(
+                    doctor=doctor, 
+                    date=today
+                ).count(),
+                'this_week': Appointment.objects.filter(
+                    doctor=doctor,
+                    date__gte=week_start
+                ).count(),
+                'this_month': Appointment.objects.filter(
+                    doctor=doctor,
+                    date__gte=month_start
+                ).count(),
+                'completed': Appointment.objects.filter(
+                    doctor=doctor,
+                    status='completed'
+                ).count(),
+                'pending': Appointment.objects.filter(
+                    doctor=doctor,
+                    status__in=['scheduled', 'confirmed']
+                ).count(),
+                'cancelled': Appointment.objects.filter(
+                    doctor=doctor,
+                    status='cancelled'
+                ).count()
+            },
+            'patients': {
+                'total_unique': Appointment.objects.filter(
+                    doctor=doctor
+                ).values('patient').distinct().count(),
+                'new_this_month': Appointment.objects.filter(
+                    doctor=doctor,
+                    date__gte=month_start,
+                    patient__created_at__gte=month_start
+                ).values('patient').distinct().count()
+            },
+            'schedule': {
+                'work_start_time': doctor.work_start_time.strftime('%H:%M') if doctor.work_start_time else None,
+                'work_end_time': doctor.work_end_time.strftime('%H:%M') if doctor.work_end_time else None,
+                'work_days': doctor.work_days
+            }
+        }
+        
+        # Próximas citas (hoy y mañana)
+        upcoming_appointments = Appointment.objects.filter(
+            doctor=doctor,
+            date__gte=today,
+            date__lte=today + timedelta(days=1),
+            status__in=['scheduled', 'confirmed']
+        ).select_related('patient__user').order_by('date', 'time')[:5]
+        
+        stats['upcoming_appointments'] = [
+            {
+                'id': apt.id,
+                'patient_name': f"{apt.patient.user.first_name} {apt.patient.user.last_name}",
+                'date': apt.date.strftime('%Y-%m-%d'),
+                'time': apt.time.strftime('%H:%M'),
+                'status': apt.status,
+                'reason': apt.reason
+            }
+            for apt in upcoming_appointments
+        ]
+        
+        return Response(stats, status=status.HTTP_200_OK)
+        
+    except Doctor.DoesNotExist:
+        return Response(
+            {'error': 'Perfil de doctor no encontrado'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Error al obtener dashboard del doctor: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsSecretary])
+def secretary_dashboard(request):
+    """
+    🎯 OBJETIVO: Dashboard específico para secretarias
+    
+    💡 CONCEPTO: Proporciona estadísticas y herramientas de gestión
+    para secretarias, incluyendo citas del día, pacientes y tareas pendientes.
+    """
+    try:
+        # Obtener el perfil de la secretaria autenticada
+        secretary = request.user.secretary_profile
+        today = timezone.now().date()
+        week_start = today - timedelta(days=today.weekday())
+        
+        # Estadísticas básicas para secretaria
+        stats = {
+            'secretary_info': {
+                'id': secretary.id,
+                'name': f"{secretary.user.first_name} {secretary.user.last_name}",
+                'employee_id': secretary.employee_id,
+                'department': secretary.department,
+                'can_manage_appointments': secretary.can_manage_appointments,
+                'can_manage_patients': secretary.can_manage_patients
+            },
+            'appointments_today': {
+                'total': Appointment.objects.filter(date=today).count(),
+                'scheduled': Appointment.objects.filter(
+                    date=today,
+                    status='scheduled'
+                ).count(),
+                'confirmed': Appointment.objects.filter(
+                    date=today,
+                    status='confirmed'
+                ).count(),
+                'completed': Appointment.objects.filter(
+                    date=today,
+                    status='completed'
+                ).count(),
+                'cancelled': Appointment.objects.filter(
+                    date=today,
+                    status='cancelled'
+                ).count()
+            },
+            'appointments_this_week': {
+                'total': Appointment.objects.filter(
+                    date__gte=week_start
+                ).count(),
+                'pending_confirmation': Appointment.objects.filter(
+                    date__gte=week_start,
+                    status='scheduled'
+                ).count()
+            },
+            'patients': {
+                'total': Patient.objects.count(),
+                'new_today': Patient.objects.filter(
+                    created_at__date=today
+                ).count(),
+                'new_this_week': Patient.objects.filter(
+                    created_at__gte=week_start
+                ).count()
+            },
+            'doctors': {
+                'total': Doctor.objects.count(),
+                'available': Doctor.objects.filter(is_available=True).count(),
+                'busy_today': Doctor.objects.filter(
+                    appointments__date=today,
+                    appointments__status__in=['scheduled', 'confirmed']
+                ).distinct().count()
+            }
+        }
+        
+        # Citas que requieren atención (pendientes de confirmación)
+        pending_appointments = Appointment.objects.filter(
+            status='scheduled',
+            date__gte=today
+        ).select_related('patient__user', 'doctor__user').order_by('date', 'time')[:10]
+        
+        stats['pending_appointments'] = [
+            {
+                'id': apt.id,
+                'patient_name': f"{apt.patient.user.first_name} {apt.patient.user.last_name}",
+                'doctor_name': f"Dr. {apt.doctor.user.first_name} {apt.doctor.user.last_name}",
+                'date': apt.date.strftime('%Y-%m-%d'),
+                'time': apt.time.strftime('%H:%M'),
+                'reason': apt.reason
+            }
+            for apt in pending_appointments
+        ]
+        
+        return Response(stats, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Error al obtener dashboard de secretaria: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminOrSuperAdmin])
+def admin_dashboard(request):
+    """
+    🎯 OBJETIVO: Dashboard actualizado para administradores
+    
+    💡 CONCEPTO: Proporciona una vista completa del sistema con
+    métricas avanzadas y herramientas de administración.
+    """
+    today = timezone.now().date()
+    week_start = today - timedelta(days=today.weekday())
+    month_start = today.replace(day=1)
+    
+    # Estadísticas completas del sistema
+    stats = {
+        'system_overview': {
+            'total_users': Patient.objects.count() + Doctor.objects.count(),
+            'total_patients': Patient.objects.count(),
+            'total_doctors': Doctor.objects.count(),
+            'active_doctors': Doctor.objects.filter(is_available=True).count(),
+            'total_appointments': Appointment.objects.count()
+        },
+        'appointments': {
+            'today': Appointment.objects.filter(date=today).count(),
+            'this_week': Appointment.objects.filter(date__gte=week_start).count(),
+            'this_month': Appointment.objects.filter(date__gte=month_start).count(),
+            'completed': Appointment.objects.filter(status='completed').count(),
+            'pending': Appointment.objects.filter(
+                status__in=['scheduled', 'confirmed']
+            ).count(),
+            'cancelled': Appointment.objects.filter(status='cancelled').count(),
+            'no_show': Appointment.objects.filter(status='no_show').count()
+        },
+        'growth_metrics': {
+            'new_patients_this_month': Patient.objects.filter(
+                created_at__gte=month_start
+            ).count(),
+            'appointments_growth': {
+                'this_month': Appointment.objects.filter(
+                    date__gte=month_start
+                ).count(),
+                'last_month': Appointment.objects.filter(
+                    date__gte=month_start - timedelta(days=30),
+                    date__lt=month_start
+                ).count()
+            }
+        },
+        'performance_metrics': {
+            'completion_rate': 0,
+            'cancellation_rate': 0,
+            'no_show_rate': 0
+        }
+    }
+    
+    # Calcular tasas de rendimiento
+    total_appointments = stats['appointments']['completed'] + stats['appointments']['cancelled'] + stats['appointments']['no_show']
+    if total_appointments > 0:
+        stats['performance_metrics']['completion_rate'] = round(
+            (stats['appointments']['completed'] / total_appointments) * 100, 2
+        )
+        stats['performance_metrics']['cancellation_rate'] = round(
+            (stats['appointments']['cancelled'] / total_appointments) * 100, 2
+        )
+        stats['performance_metrics']['no_show_rate'] = round(
+            (stats['appointments']['no_show'] / total_appointments) * 100, 2
+        )
+    
+    # Top doctores por citas
+    top_doctors = Doctor.objects.annotate(
+        total_appointments=Count('appointments'),
+        completed_appointments=Count('appointments', filter=Q(appointments__status='completed'))
+    ).order_by('-total_appointments')[:5]
+    
+    stats['top_doctors'] = [
+        {
+            'id': doctor.id,
+            'name': f"Dr. {doctor.user.first_name} {doctor.user.last_name}",
+            'specialization': doctor.specialization,
+            'total_appointments': doctor.total_appointments,
+            'completed_appointments': doctor.completed_appointments
+        }
+        for doctor in top_doctors
+    ]
+    
+    return Response(stats, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsClient])
+def client_dashboard(request):
+    """
+    🎯 OBJETIVO: Dashboard específico para clientes/pacientes
+    
+    💡 CONCEPTO: Proporciona información personalizada para el paciente,
+    incluyendo sus citas, historial y próximas consultas.
+    """
+    try:
+        # Obtener el perfil del paciente autenticado
+        patient = request.user.patient_profile
+        today = timezone.now().date()
+        
+        # Estadísticas del paciente
+        stats = {
+            'patient_info': {
+                'id': patient.id,
+                'name': f"{patient.user.first_name} {patient.user.last_name}",
+                'email': patient.user.email,
+                'phone': patient.phone_number,
+                'date_of_birth': patient.date_of_birth.strftime('%Y-%m-%d') if patient.date_of_birth else None,
+                'emergency_contact': patient.emergency_contact_name,
+                'emergency_phone': patient.emergency_contact_phone,
+                'gender': patient.get_gender_display() if patient.gender else None,
+                'address': patient.address,
+                'blood_type': patient.blood_type,
+                'allergies': patient.allergies,
+                'medical_conditions': patient.medical_conditions
+            },
+            'appointments': {
+                'total': Appointment.objects.filter(patient=patient).count(),
+                'completed': Appointment.objects.filter(
+                    patient=patient,
+                    status='completed'
+                ).count(),
+                'upcoming': Appointment.objects.filter(
+                    patient=patient,
+                    date__gte=today,
+                    status__in=['scheduled', 'confirmed']
+                ).count(),
+                'cancelled': Appointment.objects.filter(
+                    patient=patient,
+                    status='cancelled'
+                ).count()
+            }
+        }
+        
+        # Próximas citas
+        upcoming_appointments = Appointment.objects.filter(
+            patient=patient,
+            date__gte=today,
+            status__in=['scheduled', 'confirmed']
+        ).select_related('doctor__user').order_by('date', 'time')[:5]
+        
+        stats['upcoming_appointments'] = [
+            {
+                'id': apt.id,
+                'doctor_name': f"Dr. {apt.doctor.user.first_name} {apt.doctor.user.last_name}",
+                'specialization': apt.doctor.specialization,
+                'date': apt.date.strftime('%Y-%m-%d'),
+                'time': apt.time.strftime('%H:%M'),
+                'status': apt.status,
+                'reason': apt.reason
+            }
+            for apt in upcoming_appointments
+        ]
+        
+        # Historial reciente (últimas 5 citas completadas)
+        recent_appointments = Appointment.objects.filter(
+            patient=patient,
+            status='completed'
+        ).select_related('doctor__user').order_by('-date', '-time')[:5]
+        
+        stats['recent_appointments'] = [
+            {
+                'id': apt.id,
+                'doctor_name': f"Dr. {apt.doctor.user.first_name} {apt.doctor.user.last_name}",
+                'specialization': apt.doctor.specialization,
+                'date': apt.date.strftime('%Y-%m-%d'),
+                'time': apt.time.strftime('%H:%M'),
+                'reason': apt.reason
+            }
+            for apt in recent_appointments
+        ]
+        
+        # Doctores frecuentes
+        frequent_doctors = Doctor.objects.filter(
+            appointments__patient=patient
+        ).annotate(
+            visit_count=Count('appointments')
+        ).order_by('-visit_count')[:3]
+        
+        stats['frequent_doctors'] = [
+            {
+                'id': doctor.id,
+                'name': f"Dr. {doctor.user.first_name} {doctor.user.last_name}",
+                'specialization': doctor.specialization,
+                'visit_count': doctor.visit_count
+            }
+            for doctor in frequent_doctors
+        ]
+        
+        return Response(stats, status=status.HTTP_200_OK)
+        
+    except Patient.DoesNotExist:
+        return Response(
+            {'error': 'Perfil de paciente no encontrado'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Error al obtener dashboard del paciente: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 @api_view(['GET'])

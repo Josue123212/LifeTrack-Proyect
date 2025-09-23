@@ -7,6 +7,7 @@ interface ActionButtonProps {
   onClick: () => void;
   variant?: 'primary' | 'secondary';
   disabled?: boolean;
+  isLoading?: boolean;
 }
 
 const ActionButton: React.FC<ActionButtonProps> = ({
@@ -15,7 +16,8 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   icon,
   onClick,
   variant = 'secondary',
-  disabled = false
+  disabled = false,
+  isLoading = false
 }) => {
   const baseClasses = "group relative w-full p-4 lg:p-6 rounded-xl transition-all duration-300 text-left border focus:outline-none focus:ring-2 focus:ring-offset-2";
   
@@ -28,8 +30,8 @@ const ActionButton: React.FC<ActionButtonProps> = ({
       focus:ring-primary
     `,
     secondary: `
-      bg-white hover:bg-gray-50 
-      text-gray-700 border-gray-200 
+      bg-background hover:bg-secondary-50 
+      text-text-primary border-border 
       hover:border-primary 
       shadow-sm hover:shadow-md
       focus:ring-primary
@@ -37,6 +39,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   };
   
   const disabledClasses = "opacity-50 cursor-not-allowed hover:transform-none hover:shadow-sm";
+  const loadingClasses = "animate-pulse cursor-wait";
   
   const iconClasses = variant === 'primary' 
     ? "text-white" 
@@ -44,25 +47,30 @@ const ActionButton: React.FC<ActionButtonProps> = ({
     
   const titleClasses = variant === 'primary'
     ? "text-white font-medium"
-    : "text-gray-800 font-medium group-hover:text-gray-900";
+    : "text-text-primary font-medium group-hover:text-text-primary";
     
   const descriptionClasses = variant === 'primary'
     ? "text-primary-light"
-    : "text-gray-500 group-hover:text-gray-600";
+    : "text-text-secondary group-hover:text-text-primary";
 
   return (
     <button
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || isLoading}
       className={`
         ${baseClasses}
         ${variantClasses[variant]}
         ${disabled ? disabledClasses : ''}
+        ${isLoading ? loadingClasses : ''}
       `.replace(/\s+/g, ' ').trim()}
     >
       <div className="flex items-start space-x-4">
         <div className={`flex-shrink-0 ${iconClasses}`}>
-          {icon}
+          {isLoading ? (
+            <div className="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin" />
+          ) : (
+            icon
+          )}
         </div>
         
         <div className="flex-1 min-w-0">
@@ -76,9 +84,9 @@ const ActionButton: React.FC<ActionButtonProps> = ({
       </div>
       
       {/* Hover indicator for secondary variant */}
-      {variant === 'secondary' && (
+      {variant === 'secondary' && !isLoading && (
         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <svg className="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </div>
@@ -87,4 +95,4 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   );
 };
 
-export default ActionButton;
+export { ActionButton };

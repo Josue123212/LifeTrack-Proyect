@@ -7,6 +7,13 @@ from datetime import datetime, timedelta, time
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
+from core.permissions import (
+    IsAppointmentParticipant, 
+    IsAdminOrSuperAdmin, 
+    IsSecretaryOrAdmin,
+    IsDoctorOrAdmin
+)
+
 from .models import Appointment
 from .serializers import (
     AppointmentSerializer,
@@ -96,9 +103,35 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """
         Instancia y retorna la lista de permisos requeridos para esta vista.
+        Implementa permisos granulares según el plan de sincronización.
         """
-        # Temporal: Permitir acceso sin autenticación para pruebas
-        permission_classes = [permissions.AllowAny]
+        # Listar citas: cualquier usuario autenticado (filtrado por get_queryset)
+        if self.action == 'list':
+            permission_classes = [permissions.IsAuthenticated]
+        
+        # Crear citas: cualquier usuario autenticado (pacientes pueden crear sus propias citas)
+        elif self.action == 'create':
+            permission_classes = [permissions.IsAuthenticated]
+        
+        # Ver, actualizar, eliminar citas específicas: participantes de la cita o administradores
+        elif self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
+            permission_classes = [permissions.IsAuthenticated, IsAppointmentParticipant]
+        
+        # Acciones de gestión de citas: doctores, secretarias y administradores
+        elif self.action in ['confirm', 'cancel', 'complete', 'reschedule']:
+            permission_classes = [permissions.IsAuthenticated, IsDoctorOrAdmin]
+        
+        # Historial y agenda: doctores y administradores
+        elif self.action in ['patient_history', 'doctor_schedule']:
+            permission_classes = [permissions.IsAuthenticated, IsDoctorOrAdmin]
+        
+        # Horarios disponibles: cualquier usuario autenticado
+        elif self.action == 'available_slots':
+            permission_classes = [permissions.IsAuthenticated]
+        
+        # Por defecto, requiere autenticación
+        else:
+            permission_classes = [permissions.IsAuthenticated]
         
         return [permission() for permission in permission_classes]
     
@@ -113,17 +146,26 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         # Filtrar según el tipo de usuario
         user = self.request.user
         
-        # Si es un paciente, solo ver sus propias citas
-        if hasattr(user, 'patient_profile'):
+        # Si es un paciente (role='client'), solo ver sus propias citas
+        if user.role == 'client' and hasattr(user, 'patient_profile'):
             queryset = queryset.filter(patient=user.patient_profile)
         
         # Si es un doctor, solo ver sus propias citas
-        elif hasattr(user, 'doctor_profile'):
+        elif user.role == 'doctor' and hasattr(user, 'doctor_profile'):
             queryset = queryset.filter(doctor=user.doctor_profile)
         
-        # Si es staff/admin, puede ver todas las citas
-        elif not user.is_staff:
-            # Si no es staff ni tiene perfil de paciente/doctor, no ver nada
+        # Si es secretaria, puede ver todas las citas
+        elif user.role == 'secretary':
+            # Las secretarias pueden ver todas las citas
+            pass
+        
+        # Si es admin o superadmin, puede ver todas las citas
+        elif user.role in ['admin', 'superadmin']:
+            # Los administradores pueden ver todas las citas
+            pass
+        
+        # Si no tiene un rol reconocido, no ver nada
+        else:
             queryset = queryset.none()
         
         # Filtros adicionales por query parameters

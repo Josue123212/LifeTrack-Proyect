@@ -11,7 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.db.models import Q
 
-from .models import User, PasswordResetToken
+from .models import User, PasswordResetToken, SecretaryProfile
 from .serializers import (
     CustomTokenObtainPairSerializer,
     UserRegistrationSerializer,
@@ -20,8 +20,11 @@ from .serializers import (
     ChangePasswordSerializer,
     PasswordResetRequestSerializer,
     PasswordResetVerifySerializer,
-    PasswordResetConfirmSerializer
+    PasswordResetConfirmSerializer,
+    SecretaryProfileSerializer
 )
+from apps.users.permissions import IsSecretary
+from core.permissions import IsSecretaryOrAdmin, IsAdminOrSuperAdmin
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -214,6 +217,376 @@ class ChangePasswordView(APIView):
         )
 
 
+# ==========================================
+# SECRETARY VIEWSETS
+# ==========================================
+
+class SecretaryViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gestionar secretarias.
+    Proporciona endpoints para:
+    - GET /api/secretaries/me/ - Obtener perfil de la secretaria actual
+    - PUT /api/secretaries/me/ - Actualizar perfil de la secretaria actual
+    - GET /api/secretaries/dashboard/ - Dashboard con estadísticas
+    - GET /api/secretaries/appointments/ - Listar citas
+    - POST /api/secretaries/appointments/ - Crear nueva cita
+    """
+    queryset = SecretaryProfile.objects.all()
+    serializer_class = SecretaryProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        """
+        Instanciar y retornar la lista de permisos requeridos para esta vista.
+        Implementa permisos granulares según el plan de sincronización.
+        """
+        # Endpoints específicos para secretarias o administradores
+        if self.action in ['me', 'dashboard', 'appointments', 'create_appointment']:
+            permission_classes = [permissions.IsAuthenticated, IsSecretaryOrAdmin]
+        
+        # Endpoints de gestión (solo administradores)
+        elif self.action in ['list', 'create', 'destroy']:
+            permission_classes = [permissions.IsAuthenticated, IsAdminOrSuperAdmin]
+        
+        # Endpoints de actualización (secretaria propietaria o admin)
+        elif self.action in ['update', 'partial_update', 'retrieve']:
+            permission_classes = [permissions.IsAuthenticated, IsSecretaryOrAdmin]
+        
+        # Por defecto, requiere autenticación
+        else:
+            permission_classes = [permissions.IsAuthenticated]
+        
+        return [permission() for permission in permission_classes]
+    
+    def get_queryset(self):
+        """
+        Filtrar queryset basado en el usuario actual.
+        """
+        if self.request.user.is_authenticated and self.request.user.is_secretary():
+            return self.queryset.filter(user=self.request.user)
+        return self.queryset.none()
+    
+    @action(detail=False, methods=['get', 'put', 'patch'], url_path='me')
+    def me(self, request):
+        """
+        Obtener o actualizar el perfil de la secretaria actual.
+        GET /api/users/secretaries/me/ - Obtener perfil
+        PUT/PATCH /api/users/secretaries/me/ - Actualizar perfil
+        """
+        try:
+            secretary_profile = self.get_queryset().first()
+            if not secretary_profile:
+                return Response(
+                    {
+                        'error': 'Perfil de secretaria no encontrado',
+                        'detail': 'No se encontró un perfil de secretaria para el usuario actual'
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            if request.method == 'GET':
+                serializer = self.get_serializer(secretary_profile)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            
+            elif request.method in ['PUT', 'PATCH']:
+                partial = request.method == 'PATCH'
+                serializer = self.get_serializer(
+                    secretary_profile, 
+                    data=request.data, 
+                    partial=partial
+                )
+                
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(
+                        {
+                            'message': 'Perfil de secretaria actualizado exitosamente',
+                            'data': serializer.data
+                        },
+                        status=status.HTTP_200_OK
+                    )
+                
+                return Response(
+                    {
+                        'error': 'Datos inválidos',
+                        'detail': serializer.errors
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+        except Exception as e:
+            return Response(
+                {
+                    'error': 'Error al procesar solicitud de secretaria',
+                    'detail': str(e)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'], url_path='dashboard')
+    def dashboard(self, request):
+        """
+        Dashboard con estadísticas para la secretaria.
+        GET /api/secretaries/dashboard/
+        """
+        try:
+            from apps.appointments.models import Appointment
+            from django.utils import timezone
+            from datetime import timedelta
+            
+            secretary_profile = self.get_queryset().first()
+            if not secretary_profile:
+                return Response(
+                    {
+                        'error': 'Perfil de secretaria no encontrado',
+                        'detail': 'No se encontró un perfil de secretaria para el usuario actual'
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Obtener fechas para estadísticas
+            today = timezone.now().date()
+            week_start = today - timedelta(days=today.weekday())
+            month_start = today.replace(day=1)
+            
+            # Estadísticas de citas
+            appointments_today = Appointment.objects.filter(
+                date=today
+            ).count()
+            
+            appointments_this_week = Appointment.objects.filter(
+                date__gte=week_start,
+                date__lte=today
+            ).count()
+            
+            appointments_this_month = Appointment.objects.filter(
+                date__gte=month_start,
+                date__lte=today
+            ).count()
+            
+            # Citas por estado
+            pending_appointments = Appointment.objects.filter(
+                status='scheduled',
+                date__gte=today
+            ).count()
+            
+            completed_appointments = Appointment.objects.filter(
+                status='completed',
+                date=today
+            ).count()
+            
+            cancelled_appointments = Appointment.objects.filter(
+                status='cancelled',
+                date=today
+            ).count()
+            
+            # Próximas citas (siguientes 5)
+            upcoming_appointments = Appointment.objects.filter(
+                date__gte=today,
+                status='scheduled'
+            ).order_by('date', 'time')[:5]
+            
+            from apps.appointments.serializers import AppointmentSerializer
+            upcoming_appointments_data = AppointmentSerializer(
+                upcoming_appointments, 
+                many=True
+            ).data
+            
+            dashboard_data = {
+                'secretary_profile': self.get_serializer(secretary_profile).data,
+                'statistics': {
+                    'appointments_today': appointments_today,
+                    'appointments_this_week': appointments_this_week,
+                    'appointments_this_month': appointments_this_month,
+                    'pending_appointments': pending_appointments,
+                    'completed_appointments': completed_appointments,
+                    'cancelled_appointments': cancelled_appointments,
+                },
+                'upcoming_appointments': upcoming_appointments_data,
+                'working_status': {
+                    'is_working_now': secretary_profile.is_working_now(),
+                    'shift_start': secretary_profile.shift_start.strftime('%H:%M') if secretary_profile.shift_start else None,
+                    'shift_end': secretary_profile.shift_end.strftime('%H:%M') if secretary_profile.shift_end else None,
+                    'shift_duration': secretary_profile.get_shift_duration(),
+                }
+            }
+            
+            return Response(dashboard_data, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {
+                    'error': 'Error al obtener dashboard',
+                    'detail': str(e)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'], url_path='appointments')
+    def appointments(self, request):
+        """
+        Listar citas que puede gestionar la secretaria.
+        GET /api/secretaries/appointments/
+        """
+        try:
+            from apps.appointments.models import Appointment
+            from apps.appointments.serializers import AppointmentSerializer
+            from django.utils import timezone
+            
+            secretary_profile = self.get_queryset().first()
+            if not secretary_profile:
+                return Response(
+                    {
+                        'error': 'Perfil de secretaria no encontrado',
+                        'detail': 'No se encontró un perfil de secretaria para el usuario actual'
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Verificar permisos
+            if not secretary_profile.can_manage_appointments:
+                return Response(
+                    {
+                        'error': 'Sin permisos',
+                        'detail': 'No tienes permisos para gestionar citas'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Filtros de query parameters
+            date_from = request.query_params.get('date_from')
+            date_to = request.query_params.get('date_to')
+            status_filter = request.query_params.get('status')
+            doctor_id = request.query_params.get('doctor_id')
+            patient_id = request.query_params.get('patient_id')
+            
+            # Construir queryset
+            queryset = Appointment.objects.all()
+            
+            # Aplicar filtros
+            if date_from:
+                try:
+                    from datetime import datetime
+                    date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+                    queryset = queryset.filter(date__gte=date_from_obj)
+                except ValueError:
+                    pass
+            
+            if date_to:
+                try:
+                    from datetime import datetime
+                    date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+                    queryset = queryset.filter(date__lte=date_to_obj)
+                except ValueError:
+                    pass
+            
+            if status_filter:
+                queryset = queryset.filter(status=status_filter)
+            
+            if doctor_id:
+                queryset = queryset.filter(doctor_id=doctor_id)
+            
+            if patient_id:
+                queryset = queryset.filter(patient_id=patient_id)
+            
+            # Ordenar por fecha y hora
+            queryset = queryset.order_by('-date', '-time')
+            
+            # Paginación
+            from django.core.paginator import Paginator
+            page_size = int(request.query_params.get('page_size', 20))
+            page_number = int(request.query_params.get('page', 1))
+            
+            paginator = Paginator(queryset, page_size)
+            page_obj = paginator.get_page(page_number)
+            
+            serializer = AppointmentSerializer(page_obj.object_list, many=True)
+            
+            return Response({
+                'count': paginator.count,
+                'num_pages': paginator.num_pages,
+                'current_page': page_number,
+                'page_size': page_size,
+                'results': serializer.data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {
+                    'error': 'Error al obtener citas',
+                    'detail': str(e)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['post'], url_path='appointments')
+    def create_appointment(self, request):
+        """
+        Crear una nueva cita.
+        POST /api/secretaries/appointments/
+        """
+        try:
+            from apps.appointments.models import Appointment
+            from apps.appointments.serializers import AppointmentCreateSerializer
+            
+            secretary_profile = self.get_queryset().first()
+            if not secretary_profile:
+                return Response(
+                    {
+                        'error': 'Perfil de secretaria no encontrado',
+                        'detail': 'No se encontró un perfil de secretaria para el usuario actual'
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Verificar permisos
+            if not secretary_profile.can_manage_appointments:
+                return Response(
+                    {
+                        'error': 'Sin permisos',
+                        'detail': 'No tienes permisos para crear citas'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Crear la cita
+            serializer = AppointmentCreateSerializer(
+                data=request.data,
+                context={'request': request}
+            )
+            
+            if serializer.is_valid():
+                appointment = serializer.save(created_by=request.user)
+                
+                from apps.appointments.serializers import AppointmentSerializer
+                response_serializer = AppointmentSerializer(appointment)
+                
+                return Response(
+                    {
+                        'message': 'Cita creada exitosamente',
+                        'data': response_serializer.data
+                    },
+                    status=status.HTTP_201_CREATED
+                )
+            
+            return Response(
+                {
+                    'error': 'Datos inválidos',
+                    'detail': serializer.errors
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        except Exception as e:
+            return Response(
+                {
+                    'error': 'Error al crear cita',
+                    'detail': str(e)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class UserListView(generics.ListAPIView):
     """
     Vista para listar usuarios (solo para administradores).
@@ -383,9 +756,21 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """
         Instancia y retorna la lista de permisos requeridos para esta vista.
+        Implementa permisos granulares según el plan de sincronización.
         """
+        # Endpoints públicos (registro y verificaciones)
         if self.action in ['create', 'check_email', 'check_username']:
             permission_classes = [permissions.AllowAny]
+        
+        # Endpoints de perfil personal (cualquier usuario autenticado)
+        elif self.action in ['profile', 'change_password']:
+            permission_classes = [permissions.IsAuthenticated]
+        
+        # Endpoints de gestión de usuarios (solo administradores)
+        elif self.action in ['list', 'retrieve', 'update', 'partial_update', 'destroy']:
+            permission_classes = [permissions.IsAuthenticated, IsAdminOrSuperAdmin]
+        
+        # Por defecto, requiere autenticación
         else:
             permission_classes = [permissions.IsAuthenticated]
         

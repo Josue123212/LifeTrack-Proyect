@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * 🔄 HOOK DE REDIRECCIÓN POR ROL
@@ -66,7 +66,8 @@ const defaultConfig: RoleRedirectConfig = {
       '/client/dashboard',
       '/client/appointments',
       '/client/book-appointment',
-      '/profile',
+      '/client/profile',
+      '/client/medical-history',
     ],
   },
 };

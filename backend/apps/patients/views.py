@@ -7,6 +7,12 @@ from datetime import datetime, timedelta
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
+from core.permissions import (
+    IsPatientOwner, 
+    IsAdminOrSuperAdmin, 
+    IsDoctorOrAdmin
+)
+
 from .models import Patient
 from .serializers import (
     PatientSerializer,
@@ -91,6 +97,33 @@ class PatientViewSet(viewsets.ModelViewSet):
         elif self.action == 'list':
             return PatientListSerializer
         return PatientSerializer
+    
+    def get_permissions(self):
+        """
+        Instancia y retorna la lista de permisos requeridos para esta vista.
+        Implementa permisos granulares según el plan de sincronización.
+        """
+        # Listar pacientes: doctores y administradores
+        if self.action == 'list':
+            permission_classes = [permissions.IsAuthenticated, IsDoctorOrAdmin]
+        
+        # Crear pacientes: cualquier usuario autenticado (auto-registro)
+        elif self.action == 'create':
+            permission_classes = [permissions.IsAuthenticated]
+        
+        # Ver, actualizar, eliminar pacientes específicos: propietario o administradores
+        elif self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
+            permission_classes = [permissions.IsAuthenticated, IsPatientOwner]
+        
+        # Historial médico y citas: propietario, doctores o administradores
+        elif self.action in ['medical_history', 'appointments', 'statistics']:
+            permission_classes = [permissions.IsAuthenticated, IsPatientOwner]
+        
+        # Por defecto, requiere autenticación
+        else:
+            permission_classes = [permissions.IsAuthenticated]
+        
+        return [permission() for permission in permission_classes]
     
     def get_queryset(self):
         """

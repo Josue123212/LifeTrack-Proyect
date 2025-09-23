@@ -151,7 +151,7 @@ export default function ResetPasswordPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-gray-600">Verificando enlace de recuperación...</p>
         </div>
       </div>
@@ -179,7 +179,7 @@ export default function ResetPasswordPage() {
           <div>
             <Link
               to="/login"
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
             >
               Ir al inicio de sesión
             </Link>
@@ -210,14 +210,14 @@ export default function ResetPasswordPage() {
           <div className="space-y-4">
             <Link
               to="/forgot-password"
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
             >
               Solicitar nuevo enlace
             </Link>
             
             <Link
               to="/login"
-              className="w-full text-center text-sm text-indigo-600 hover:text-indigo-500 transition-colors block"
+              className="w-full text-center text-sm text-primary hover:text-primary-hover transition-colors block"
             >
               Volver al inicio de sesión
             </Link>
@@ -254,9 +254,9 @@ export default function ResetPasswordPage() {
                 {...register('password')}
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="new-password"
-                className={`appearance-none relative block w-full px-3 py-3 pl-10 pr-10 border ${
+                className={`appearance-none relative block w-full px-3 py-3 pl-10 border ${
                   errors.password ? 'border-red-300' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm transition-colors`}
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm transition-colors`}
                 placeholder="Ingresa tu nueva contraseña"
               />
               <LockClosedIcon className="h-5 w-5 text-gray-400 absolute left-3 top-3.5" />
@@ -302,7 +302,7 @@ export default function ResetPasswordPage() {
                 autoComplete="new-password"
                 className={`appearance-none relative block w-full px-3 py-3 pl-10 pr-10 border ${
                   errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm transition-colors`}
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm transition-colors`}
                 placeholder="Confirma tu nueva contraseña"
               />
               <LockClosedIcon className="h-5 w-5 text-gray-400 absolute left-3 top-3.5" />
@@ -328,7 +328,7 @@ export default function ResetPasswordPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isLoading ? (
                 <>
@@ -350,7 +350,7 @@ export default function ResetPasswordPage() {
           <div className="text-center">
             <Link
               to="/login"
-              className="text-sm text-indigo-600 hover:text-indigo-500 transition-colors"
+              className="text-sm text-primary hover:text-primary-hover transition-colors"
             >
               ← Volver al inicio de sesión
             </Link>

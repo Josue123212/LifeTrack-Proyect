@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import ActionButton from './ActionButton';
+import { ActionButton } from './ActionButton';
 
 const QuickActions: React.FC = () => {
   const navigate = useNavigate();
@@ -51,18 +51,18 @@ const QuickActions: React.FC = () => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       ),
-      onClick: () => navigate('/medical-history'),
+      onClick: () => navigate('/client/medical-history'),
       variant: 'secondary' as const
     }
   ];
 
   return (
-    <div className="bg-white rounded-xl lg:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 lg:p-8">
+    <div className="bg-background rounded-xl lg:rounded-2xl shadow-sm border border-border p-4 sm:p-6 lg:p-8">
       <div className="mb-6">
-        <h2 className="text-xl sm:text-2xl font-light text-gray-800 mb-2">
+        <h2 className="text-xl sm:text-2xl font-light text-text-primary mb-2">
           Acciones Rápidas
         </h2>
-        <p className="text-sm sm:text-base text-gray-500">
+        <p className="text-sm sm:text-base text-text-secondary">
           Gestiona tus citas y servicios médicos
         </p>
       </div>

@@ -95,7 +95,7 @@ export default function ForgotPasswordPage() {
           <div className="space-y-4">
             <Link
               to="/login"
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
             >
               <ArrowLeftIcon className="h-4 w-4 mr-2" />
               Volver al inicio de sesión
@@ -103,7 +103,7 @@ export default function ForgotPasswordPage() {
             
             <button
               onClick={() => setEmailSent(false)}
-              className="w-full text-center text-sm text-indigo-600 hover:text-indigo-500 transition-colors"
+              className="w-full text-center text-sm text-primary hover:text-primary-hover transition-colors"
             >
               ¿Necesitas enviar otro email?
             </button>
@@ -139,7 +139,7 @@ export default function ForgotPasswordPage() {
                 autoComplete="email"
                 className={`appearance-none relative block w-full px-3 py-3 pl-10 border ${
                   errors.email ? 'border-red-300' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm transition-colors`}
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm transition-colors`}
                 placeholder="tu-email@ejemplo.com"
               />
               <EnvelopeIcon className="h-5 w-5 text-gray-400 absolute left-3 top-3.5" />
@@ -153,7 +153,7 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isLoading ? (
                 <>
@@ -175,7 +175,7 @@ export default function ForgotPasswordPage() {
           <div className="text-center">
             <Link
               to="/login"
-              className="text-sm text-indigo-600 hover:text-indigo-500 transition-colors"
+              className="text-sm text-primary hover:text-primary-hover transition-colors"
             >
               ← Volver al inicio de sesión
             </Link>

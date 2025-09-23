@@ -263,93 +263,92 @@
 
 ---
 
-### 📊 Fase 8: Reportes y Analytics
+### 🔧 Fase 8: Tareas Pendientes para MVP (ALTERNATIVA 1 DÍA)
 
-#### 8.1 Endpoints de Reportes
-- [ ] Crear app `reports`: `python manage.py startapp reports`
-- [ ] Implementar endpoint de estadísticas básicas
-- [ ] Crear reporte de citas por período
-- [ ] Implementar reporte de doctores más solicitados
-- [ ] Agregar métricas de cancelaciones
+#### 8.1 Modelo SecretaryProfile (PRIORIDAD ALTA)
+- [x] **PRIORIDAD ALTA**: Crear modelo `SecretaryProfile` en `apps/users/models.py`
+- [x] **PRIORIDAD ALTA**: Crear migración para `SecretaryProfile`
+- [x] **PRIORIDAD ALTA**: Agregar `SecretaryProfile` al admin
+- [x] **PRIORIDAD ALTA**: Crear serializer para `SecretaryProfile`
 
-#### 8.2 Exportación de Datos
-- [x] Implementar exportación a CSV
-- [x] Crear endpoint de exportación de citas
-- [x] Implementar filtros para exportación
-- [x] Agregar permisos de administrador para reportes
+#### 8.2 Endpoints de Dashboard por Rol (PRIORIDAD ALTA)
+- [x] **PRIORIDAD ALTA**: Crear `GET /api/dashboard/doctor/` - Stats para doctor
+- [x] **PRIORIDAD ALTA**: Crear `GET /api/dashboard/secretary/` - Stats para secretaria
+- [x] **PRIORIDAD ALTA**: Crear `GET /api/dashboard/admin/` - Stats para admin
+- [x] **PRIORIDAD ALTA**: Implementar permisos específicos por rol
 
----
+#### 8.3 Autenticación Completa (PRIORIDAD ALTA)
+- [x] **PRIORIDAD ALTA**: Verificar que JWT funcione correctamente
+- [x] **PRIORIDAD ALTA**: Implementar refresh token
+- [x] **PRIORIDAD ALTA**: Crear endpoint de verificación de rol
+- [x] **PRIORIDAD ALTA**: Configurar CORS para frontend
 
-### 🧪 Fase 9: Testing
-
-#### 9.1 Tests Unitarios
-- [ ] Configurar pytest-django
-- [ ] Crear tests para modelos de User
-- [ ] Crear tests para modelos de Patient, Doctor, Appointment
-- [ ] Implementar tests para serializers
-- [ ] Crear tests para views y permisos
-
-#### 9.2 Tests de Integración
-- [ ] Crear tests de flujo completo de registro
-- [ ] Implementar tests de creación de citas
-- [ ] Crear tests de autenticación JWT
-- [ ] Probar flujos de diferentes roles
-
-#### 9.3 Fixtures y Factory
-- [ ] Crear fixtures para datos de prueba
-- [ ] Implementar factory_boy para generación de datos
-- [ ] Crear comando de management para datos de prueba
+#### 8.4 Datos de Prueba (PRIORIDAD MEDIA)
+- [x] **PRIORIDAD MEDIA**: Crear comando para generar datos de prueba
+- [x] **PRIORIDAD MEDIA**: Crear usuarios de ejemplo (doctor, secretaria, admin)
+- [x] **PRIORIDAD MEDIA**: Crear citas de ejemplo
+- [x] **PRIORIDAD MEDIA**: Crear pacientes de ejemplo
 
 ---
 
-### 🚀 Fase 10: Optimización y Producción
+### 📊 Fase 9: Reportes y Analytics (OMITIR PARA MVP)
 
-#### 10.1 Optimización de Performance
-- [ ] Implementar select_related y prefetch_related
-- [ ] Agregar índices de base de datos
-- [ ] Configurar cache con Redis
-- [ ] Implementar cache de consultas frecuentes
-
-#### 10.2 Configuración de Producción
-- [ ] Crear `settings/production.py`
-- [ ] Configurar variables de entorno para producción
-- [ ] Configurar logging
-- [ ] Implementar manejo de errores personalizado
-
-#### 10.3 Seguridad
-- [ ] Configurar CORS apropiadamente
-- [ ] Implementar rate limiting
-- [ ] Configurar HTTPS settings
-- [ ] Revisar configuraciones de seguridad de Django
-
-#### 10.4 Documentación API
-- [ ] Instalar `drf-spectacular`
-- [ ] Configurar OpenAPI schema
-- [ ] Agregar documentación a endpoints
-- [ ] Generar documentación automática
-- [ ] Probar documentación en /api/docs/
+#### 9.1 OMITIR COMPLETAMENTE PARA ALTERNATIVA 1 DÍA
+- [ ] **NOTA**: Los reportes son funcionalidades avanzadas
+- [ ] **IMPLEMENTAR EN**: Versión 2.0 del sistema
+- [ ] **ALTERNATIVA MVP**: Usar datos básicos en dashboards
 
 ---
 
-### 📦 Fase 11: Deployment
+### 🧪 Fase 10: Testing (OMITIR PARA MVP)
 
-#### 11.1 Containerización
-- [ ] Crear `Dockerfile` para Django
-- [ ] Crear `docker-compose.yml` para desarrollo
-- [ ] Crear `docker-compose.prod.yml` para producción
-- [ ] Configurar volúmenes para datos persistentes
+#### 10.1 OMITIR COMPLETAMENTE PARA ALTERNATIVA 1 DÍA
+- [ ] **NOTA**: Testing se implementará después del MVP
+- [ ] **PRIORIDAD**: Funcionalidad básica primero
 
-#### 11.2 Configuración de Servidor
-- [ ] Configurar Nginx como reverse proxy
-- [ ] Configurar SSL/TLS
-- [ ] Implementar health checks
-- [ ] Configurar logging centralizado
+---
 
-#### 11.3 CI/CD
-- [ ] Crear workflow de GitHub Actions
-- [ ] Configurar tests automáticos
-- [ ] Implementar deployment automático
-- [ ] Configurar rollback automático
+### 🚀 Fase 11: Optimización y Producción (BÁSICO PARA MVP)
+
+#### 11.1 Optimización de Performance (OMITIR)
+- [ ] **OMITIR**: Optimizaciones complejas para MVP
+- [ ] **IMPLEMENTAR EN**: Versión 2.0
+
+#### 11.2 Configuración de Producción (ESENCIAL)
+- [x] **PRIORIDAD ALTA**: Crear `settings/production.py` básico
+- [x] **PRIORIDAD ALTA**: Configurar variables de entorno básicas
+- [ ] **OMITIR**: Logging complejo
+- [ ] **OMITIR**: Manejo de errores avanzado
+
+#### 11.3 Seguridad (BÁSICA)
+- [x] **PRIORIDAD ALTA**: Configurar CORS básico
+- [ ] **OMITIR**: Rate limiting
+- [ ] **OMITIR**: HTTPS settings (para MVP local)
+
+#### 11.4 Documentación API (BÁSICA)
+- [x] **PRIORIDAD MEDIA**: Instalar `drf-spectacular`
+- [x] **PRIORIDAD MEDIA**: Configurar OpenAPI schema básico
+- [ ] **OMITIR**: Documentación detallada
+
+---
+
+### 📦 Fase 12: Deployment (RÁPIDO PARA MVP)
+
+#### 12.1 Deployment Rápido
+- [ ] **PRIORIDAD ALTA**: Configurar deployment en Railway/Render
+- [ ] **PRIORIDAD ALTA**: Configurar variables de entorno en plataforma
+- [ ] **OMITIR**: Docker para MVP
+- [ ] **OMITIR**: Nginx
+
+#### 12.2 Configuración Mínima
+- [ ] **PRIORIDAD ALTA**: Configurar base de datos PostgreSQL en la nube
+- [ ] **PRIORIDAD ALTA**: Configurar archivos estáticos
+- [ ] **OMITIR**: SSL/TLS complejo
+- [ ] **OMITIR**: Health checks
+
+#### 12.3 CI/CD (OMITIR)
+- [ ] **OMITIR**: GitHub Actions para MVP
+- [ ] **NOTA**: Deploy manual para MVP
 
 ---
 

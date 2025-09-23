@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 // Google Icons - Material Design Icons
 // Usamos strings para los iconos de Google Material Icons
@@ -21,25 +21,25 @@ export const navigationConfig: NavigationConfig = {
   client: [
     {
       name: 'Dashboard',
-      href: '/dashboard',
+      href: '/client/dashboard',
       icon: 'dashboard',
       description: 'Panel principal'
     },
     {
       name: 'Mis Citas',
-      href: '/appointments',
+      href: '/client/appointments',
       icon: 'event',
       description: 'Ver y gestionar mis citas médicas'
     },
     {
       name: 'Mi Perfil',
-      href: '/profile',
+      href: '/client/profile',
       icon: 'person',
       description: 'Información personal y configuración'
     },
     {
       name: 'Historial Médico',
-      href: '/medical-history',
+      href: '/client/medical-history',
       icon: 'history',
       description: 'Historial de consultas y tratamientos'
     }
@@ -49,31 +49,31 @@ export const navigationConfig: NavigationConfig = {
   doctor: [
     {
       name: 'Dashboard',
-      href: '/dashboard',
+      href: '/doctor/dashboard',
       icon: 'dashboard',
       description: 'Panel principal'
     },
     {
       name: 'Agenda',
-      href: '/schedule',
+      href: '/doctor/appointments',
       icon: 'schedule',
       description: 'Mi agenda de citas'
     },
     {
       name: 'Pacientes',
-      href: '/patients',
+      href: '/doctor/patients',
       icon: 'people',
       description: 'Gestión de pacientes'
     },
     {
       name: 'Consultas',
-      href: '/consultations',
+      href: '/doctor/consultations',
       icon: 'medical_services',
       description: 'Historial de consultas'
     },
     {
       name: 'Mi Perfil',
-      href: '/profile',
+      href: '/doctor/profile',
       icon: 'person',
       description: 'Información profesional'
     }
@@ -83,37 +83,37 @@ export const navigationConfig: NavigationConfig = {
   admin: [
     {
       name: 'Dashboard',
-      href: '/dashboard',
+      href: '/admin/dashboard',
       icon: 'dashboard',
       description: 'Panel de control administrativo'
     },
     {
       name: 'Citas',
-      href: '/appointments',
+      href: '/admin/appointments',
       icon: 'event',
       description: 'Gestión de todas las citas'
     },
     {
       name: 'Pacientes',
-      href: '/patients',
+      href: '/admin/patients',
       icon: 'people',
       description: 'Gestión de pacientes'
     },
     {
       name: 'Doctores',
-      href: '/doctors',
+      href: '/admin/doctors',
       icon: 'local_hospital',
       description: 'Gestión de personal médico'
     },
     {
       name: 'Reportes',
-      href: '/reports',
+      href: '/admin/reports',
       icon: 'analytics',
       description: 'Reportes y estadísticas'
     },
     {
       name: 'Configuración',
-      href: '/settings',
+      href: '/admin/settings',
       icon: 'settings',
       description: 'Configuración del sistema'
     }
@@ -123,49 +123,49 @@ export const navigationConfig: NavigationConfig = {
   superadmin: [
     {
       name: 'Dashboard',
-      href: '/dashboard',
+      href: '/superadmin/dashboard',
       icon: 'dashboard',
       description: 'Panel de control principal'
     },
     {
       name: 'Gestión de Usuarios',
-      href: '/users',
+      href: '/superadmin/users',
       icon: 'admin_panel_settings',
       description: 'Administración de usuarios y roles'
     },
     {
       name: 'Centros Médicos',
-      href: '/medical-centers',
+      href: '/superadmin/medical-centers',
       icon: 'business',
       description: 'Gestión de centros médicos'
     },
     {
       name: 'Doctores',
-      href: '/doctors',
+      href: '/superadmin/doctors',
       icon: 'local_hospital',
       description: 'Gestión global de doctores'
     },
     {
       name: 'Pacientes',
-      href: '/patients',
+      href: '/superadmin/patients',
       icon: 'people',
       description: 'Gestión global de pacientes'
     },
     {
       name: 'Reportes Globales',
-      href: '/global-reports',
+      href: '/superadmin/global-reports',
       icon: 'assessment',
       description: 'Reportes del sistema completo'
     },
     {
       name: 'Logs del Sistema',
-      href: '/system-logs',
+      href: '/superadmin/system-logs',
       icon: 'bug_report',
       description: 'Logs y auditoría del sistema'
     },
     {
       name: 'Configuración Global',
-      href: '/global-settings',
+      href: '/superadmin/global-settings',
       icon: 'tune',
       description: 'Configuración avanzada del sistema'
     }
@@ -175,31 +175,31 @@ export const navigationConfig: NavigationConfig = {
   receptionist: [
     {
       name: 'Dashboard',
-      href: '/dashboard',
+      href: '/receptionist/dashboard',
       icon: 'dashboard',
       description: 'Panel de recepción'
     },
     {
       name: 'Agenda',
-      href: '/schedule',
+      href: '/receptionist/schedule',
       icon: 'schedule',
       description: 'Agenda general de citas'
     },
     {
       name: 'Nueva Cita',
-      href: '/appointments/new',
+      href: '/receptionist/appointments/new',
       icon: 'add_circle',
       description: 'Programar nueva cita'
     },
     {
       name: 'Pacientes',
-      href: '/patients',
+      href: '/receptionist/patients',
       icon: 'people',
       description: 'Registro de pacientes'
     },
     {
       name: 'Check-in',
-      href: '/checkin',
+      href: '/receptionist/checkin',
       icon: 'how_to_reg',
       description: 'Registro de llegada de pacientes'
     }

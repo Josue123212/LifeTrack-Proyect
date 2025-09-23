@@ -13,6 +13,8 @@ class User(AbstractUser):
     """
     ROLE_CHOICES = [
         ('client', 'Cliente'),
+        ('doctor', 'Doctor'),
+        ('secretary', 'Secretario/a'),
         ('admin', 'Administrador'),
         ('superadmin', 'Super Administrador'),
     ]
@@ -92,6 +94,18 @@ class User(AbstractUser):
         Verifica si el usuario es cliente.
         """
         return self.role == 'client'
+    
+    def is_doctor(self):
+        """
+        Verifica si el usuario es doctor.
+        """
+        return self.role == 'doctor'
+    
+    def is_secretary(self):
+        """
+        Verifica si el usuario es secretario/a.
+        """
+        return self.role == 'secretary'
 
 
 class PasswordResetToken(models.Model):
@@ -229,3 +243,157 @@ class PasswordResetToken(models.Model):
             expires_at__lt=timezone.now()
         ).delete()[0]
         return expired_count
+
+
+class SecretaryProfile(models.Model):
+    """
+    Modelo de perfil para usuarios con rol de secretario/a.
+    Contiene información específica para la gestión administrativa.
+    """
+    user = models.OneToOneField(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='secretary_profile',
+        verbose_name='Usuario'
+    )
+    
+    employee_id = models.CharField(
+        max_length=20, 
+        unique=True,
+        verbose_name='ID de Empleado',
+        help_text='Identificador único del empleado'
+    )
+    
+    department = models.CharField(
+        max_length=100,
+        verbose_name='Departamento',
+        help_text='Departamento donde trabaja la secretaria'
+    )
+    
+    shift_start = models.TimeField(
+        verbose_name='Inicio de Turno',
+        help_text='Hora de inicio del turno de trabajo'
+    )
+    
+    shift_end = models.TimeField(
+        verbose_name='Fin de Turno',
+        help_text='Hora de fin del turno de trabajo'
+    )
+    
+    can_manage_appointments = models.BooleanField(
+        default=True,
+        verbose_name='Puede Gestionar Citas',
+        help_text='Permiso para crear, modificar y cancelar citas'
+    )
+    
+    can_manage_patients = models.BooleanField(
+        default=True,
+        verbose_name='Puede Gestionar Pacientes',
+        help_text='Permiso para gestionar información de pacientes'
+    )
+    
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Fecha de Creación'
+    )
+    
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Fecha de Actualización'
+    )
+    
+    class Meta:
+        verbose_name = 'Perfil de Secretario/a'
+        verbose_name_plural = 'Perfiles de Secretarios/as'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['employee_id']),
+            models.Index(fields=['department']),
+        ]
+    
+    def __str__(self):
+        return f"Secretario/a: {self.user.get_full_name()} - {self.department}"
+    
+    def get_full_name(self):
+        """
+        Retorna el nombre completo del secretario/a.
+        """
+        return self.user.get_full_name()
+    
+    def get_shift_duration(self):
+        """
+        Calcula la duración del turno en horas.
+        """
+        from datetime import datetime, timedelta, time
+        
+        # Función helper para convertir a time
+        def to_time(time_value):
+            if isinstance(time_value, time):
+                return time_value
+            time_str = str(time_value)
+            # Intentar diferentes formatos
+            for fmt in ['%H:%M:%S', '%H:%M']:
+                try:
+                    return datetime.strptime(time_str, fmt).time()
+                except ValueError:
+                    continue
+            raise ValueError(f"No se pudo convertir {time_str} a time")
+        
+        # Convertir a objetos time
+        start_time = to_time(self.shift_start)
+        end_time = to_time(self.shift_end)
+        
+        # Convertir TimeField a datetime para calcular diferencia
+        start = datetime.combine(datetime.today(), start_time)
+        end = datetime.combine(datetime.today(), end_time)
+        
+        # Si el turno termina al día siguiente
+        if end < start:
+            end += timedelta(days=1)
+        
+        duration = end - start
+        return duration.total_seconds() / 3600  # Retornar en horas
+    
+    def is_working_now(self):
+        """
+        Verifica si la secretaria está en horario de trabajo actualmente.
+        """
+        from datetime import datetime, time
+        
+        now = datetime.now().time()
+        
+        # Función helper para convertir a time
+        def to_time(time_value):
+            if isinstance(time_value, time):
+                return time_value
+            time_str = str(time_value)
+            # Intentar diferentes formatos
+            for fmt in ['%H:%M:%S', '%H:%M']:
+                try:
+                    return datetime.strptime(time_str, fmt).time()
+                except ValueError:
+                    continue
+            raise ValueError(f"No se pudo convertir {time_str} a time")
+        
+        # Convertir a objetos time
+        start_time = to_time(self.shift_start)
+        end_time = to_time(self.shift_end)
+        
+        # Si el turno no cruza medianoche
+        if start_time <= end_time:
+            return start_time <= now <= end_time
+        # Si el turno cruza medianoche
+        else:
+            return now >= start_time or now <= end_time
+    
+    def get_permissions_summary(self):
+        """
+        Retorna un resumen de los permisos del secretario/a.
+        """
+        permissions = []
+        if self.can_manage_appointments:
+            permissions.append('Gestión de Citas')
+        if self.can_manage_patients:
+            permissions.append('Gestión de Pacientes')
+        
+        return ', '.join(permissions) if permissions else 'Sin permisos especiales'

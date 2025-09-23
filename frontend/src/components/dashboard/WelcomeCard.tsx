@@ -1,5 +1,5 @@
 import React from 'react';
-import type { User } from '@/types/auth';
+import type { User } from '../../types/auth';
 
 interface WelcomeCardProps {
   user: User | null;

@@ -7,7 +7,8 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useFormValidation } from '../lib/hooks/useFormValidation';
 import { loginSchema, type LoginFormData } from '../lib/validations';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
+import GoogleAuthButton from '../components/auth/GoogleAuthButton';
 
 /**
  * 🔐 PÁGINA DE LOGIN
@@ -55,10 +56,18 @@ const LoginPage: React.FC = () => {
   };
 
   /**
-   * 🎨 Maneja el login con Google (placeholder)
+   * 🎨 Maneja el éxito del login con Google
    */
-  const handleGoogleLogin = () => {
-    toast.info('Login con Google próximamente');
+  const handleGoogleSuccess = () => {
+    toast.success('¡Login con Google exitoso!');
+    navigate('/dashboard');
+  };
+
+  /**
+   * 🚨 Maneja errores del login con Google
+   */
+  const handleGoogleError = (error: string) => {
+    toast.error(`Error con Google: ${error}`);
   };
 
   return (
@@ -160,16 +169,11 @@ const LoginPage: React.FC = () => {
             </div>
 
             {/* Social Login */}
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={handleGoogleLogin}
-              disabled={isLoading}
-              className="w-full focus:ring-2 focus:ring-offset-2 focus:ring-primary border-primary text-primary hover:bg-primary hover:text-white"
-            >
-              🌐 Google
-            </Button>
+            <GoogleAuthButton
+              mode="login"
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+            />
           </form>
 
           {/* Enlaces de navegación */}

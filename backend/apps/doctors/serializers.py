@@ -26,13 +26,13 @@ class DoctorSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'user',
-            'first_name',
+            'first_name', 
             'last_name', 
             'email',
             'full_name',
-            'license_number',
+            'medical_license',
             'specialization',
-            'experience_years',
+            'years_experience',
             'consultation_fee',
             'bio',
             'is_available',
@@ -43,7 +43,7 @@ class DoctorSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
-    def validate_license_number(self, value):
+    def validate_medical_license(self, value):
         """
         Valida que el número de licencia sea único y tenga formato válido.
         """
@@ -53,7 +53,7 @@ class DoctorSerializer(serializers.ModelSerializer):
             )
         
         # Verificar unicidad excluyendo la instancia actual en caso de actualización
-        queryset = Doctor.objects.filter(license_number=value)
+        queryset = Doctor.objects.filter(medical_license=value)
         if self.instance:
             queryset = queryset.exclude(pk=self.instance.pk)
         
@@ -80,20 +80,18 @@ class DoctorSerializer(serializers.ModelSerializer):
         
         return value
 
-    def validate_experience_years(self, value):
+    def validate_years_experience(self, value):
         """
-        Valida que los años de experiencia sean razonables.
+        Valida que los años de experiencia sean un valor positivo.
         """
         if value < 0:
             raise serializers.ValidationError(
                 "Los años de experiencia no pueden ser negativos."
             )
-        
         if value > 70:
             raise serializers.ValidationError(
-                "Los años de experiencia parecen excesivos."
+                "Los años de experiencia no pueden ser mayores a 70."
             )
-        
         return value
 
     def get_appointments(self, obj):
@@ -138,9 +136,9 @@ class DoctorCreateSerializer(serializers.ModelSerializer):
         model = Doctor
         fields = [
             'user_id',
-            'license_number',
+            'medical_license',
             'specialization',
-            'experience_years',
+            'years_experience',
             'consultation_fee',
             'bio',
             'is_available'
@@ -189,7 +187,7 @@ class DoctorUpdateSerializer(serializers.ModelSerializer):
         model = Doctor
         fields = [
             'specialization',
-            'experience_years',
+            'years_experience',
             'consultation_fee',
             'bio',
             'is_available'
@@ -212,7 +210,7 @@ class DoctorListSerializer(serializers.ModelSerializer):
             'full_name',
             'email',
             'specialization',
-            'experience_years',
+            'years_experience',
             'consultation_fee',
             'is_available'
         ]
@@ -231,7 +229,138 @@ class DoctorPublicSerializer(serializers.ModelSerializer):
             'id',
             'full_name',
             'specialization',
-            'experience_years',
+            'years_experience',
             'bio',
             'is_available'
         ]
+
+
+class DoctorProfileSerializer(serializers.ModelSerializer):
+    """
+    Serializer para el perfil completo del doctor.
+    Incluye información del usuario y campos específicos del doctor.
+    Compatible con la interfaz DoctorProfile del frontend.
+    """
+    # Campos del usuario relacionado
+    user = serializers.SerializerMethodField()
+    
+    # Mapeo de campos para compatibilidad con frontend
+    medical_license = serializers.CharField()
+    years_experience = serializers.IntegerField()
+    
+    # Campos adicionales que se pueden agregar en el futuro
+    work_start_time = serializers.SerializerMethodField()
+    work_end_time = serializers.SerializerMethodField()
+    work_days = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Doctor
+        fields = [
+            'id',
+            'user',
+            'medical_license',
+            'specialization',
+            'years_experience',
+            'consultation_fee',
+            'bio',
+            'is_available',
+            'work_start_time',
+            'work_end_time',
+            'work_days',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_user(self, obj):
+        """
+        Retorna información básica del usuario asociado al doctor.
+        """
+        return {
+            'id': obj.user.id,
+            'username': obj.user.username,
+            'email': obj.user.email,
+            'first_name': obj.user.first_name,
+            'last_name': obj.user.last_name,
+            'full_name': obj.user.get_full_name(),
+            'role': obj.user.role,
+            'phone': getattr(obj.user, 'phone', ''),
+            'is_active': obj.user.is_active
+        }
+
+    def get_work_start_time(self, obj):
+        """
+        Retorna la hora de inicio de trabajo.
+        Por ahora retorna un valor por defecto, se puede personalizar en el futuro.
+        """
+        # TODO: Agregar campo work_start_time al modelo Doctor si es necesario
+        return "08:00"
+
+    def get_work_end_time(self, obj):
+        """
+        Retorna la hora de fin de trabajo.
+        Por ahora retorna un valor por defecto, se puede personalizar en el futuro.
+        """
+        # TODO: Agregar campo work_end_time al modelo Doctor si es necesario
+        return "17:00"
+
+    def get_work_days(self, obj):
+        """
+        Retorna los días de trabajo.
+        Por ahora retorna días laborales por defecto, se puede personalizar en el futuro.
+        """
+        # TODO: Agregar campo work_days al modelo Doctor si es necesario
+        return ["monday", "tuesday", "wednesday", "thursday", "friday"]
+
+    def validate_medical_license(self, value):
+        """
+        Valida el número de licencia médica.
+        """
+        if not value or len(value.strip()) < 5:
+            raise serializers.ValidationError(
+                "El número de licencia médica debe tener al menos 5 caracteres."
+            )
+        
+        # Verificar unicidad excluyendo la instancia actual en caso de actualización
+        queryset = Doctor.objects.filter(license_number=value)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        
+        if queryset.exists():
+            raise serializers.ValidationError(
+                "Ya existe un doctor con este número de licencia médica."
+            )
+        
+        return value.strip().upper()
+
+    def validate_years_experience(self, value):
+        """
+        Valida los años de experiencia.
+        """
+        if value < 0:
+            raise serializers.ValidationError(
+                "Los años de experiencia no pueden ser negativos."
+            )
+        
+        if value > 70:
+            raise serializers.ValidationError(
+                "Los años de experiencia parecen excesivos."
+            )
+        
+        return value
+
+    def validate_consultation_fee(self, value):
+        """
+        Valida la tarifa de consulta.
+        """
+        if value < Decimal('0.00'):
+            raise serializers.ValidationError(
+                "La tarifa de consulta no puede ser negativa."
+            )
+        
+        if value > Decimal('10000.00'):
+            raise serializers.ValidationError(
+                "La tarifa de consulta parece excesivamente alta."
+            )
+        
+        return value

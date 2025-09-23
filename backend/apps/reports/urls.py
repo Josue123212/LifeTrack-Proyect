@@ -44,6 +44,45 @@ urlpatterns = [
     ),
     
     # =============================================================================
+    # 🎯 DASHBOARD ENDPOINTS ESPECÍFICOS POR ROL
+    # =============================================================================
+    
+    # 👨‍⚕️ Dashboard para doctores
+    path(
+        'dashboard/doctor/',
+        views.doctor_dashboard,
+        name='doctor_dashboard'
+    ),
+    
+    # 👩‍💼 Dashboard para secretarias
+    path(
+        'dashboard/secretary/',
+        views.secretary_dashboard,
+        name='secretary_dashboard'
+    ),
+    
+    # 👨‍💼 Dashboard para administradores (actualizado)
+    path(
+        'dashboard/admin/',
+        views.admin_dashboard,
+        name='admin_dashboard'
+    ),
+    
+    # 👤 Dashboard para clientes/pacientes
+    path(
+        'dashboard/client/',
+        views.client_dashboard,
+        name='client_dashboard'
+    ),
+    
+    # 🔧 Dashboard para super administradores
+    path(
+        'dashboard/superadmin/',
+        views.superadmin_dashboard,
+        name='superadmin_dashboard'
+    ),
+    
+    # =============================================================================
     # 📥 ENDPOINTS DE EXPORTACIÓN CSV
     # =============================================================================
     
@@ -111,9 +150,36 @@ urlpatterns = [
    - Descripción: Resumen ejecutivo para dashboard
    - Parámetros: Ninguno
 
+🎯 DASHBOARD ENDPOINTS POR ROL:
+
+6. /api/reports/dashboard/doctor/
+   - Método: GET
+   - Permisos: IsDoctor
+   - Descripción: Dashboard personalizado para doctores
+   - Incluye: citas del doctor, pacientes, horarios, próximas citas
+
+7. /api/reports/dashboard/secretary/
+   - Método: GET
+   - Permisos: IsSecretary
+   - Descripción: Dashboard para secretarias
+   - Incluye: citas del día, pacientes nuevos, tareas pendientes
+
+8. /api/reports/dashboard/admin/
+   - Método: GET
+   - Permisos: IsAdminOrSuperAdmin
+   - Descripción: Dashboard completo para administradores
+   - Incluye: métricas del sistema, top doctores, tasas de rendimiento
+
+9. /api/reports/dashboard/client/
+   - Método: GET
+   - Permisos: IsClient
+   - Descripción: Dashboard personalizado para pacientes
+   - Incluye: próximas citas, historial, doctores frecuentes
+
 🔒 SEGURIDAD:
 - Todos los endpoints requieren autenticación
-- La mayoría requieren permisos de administrador
+- Permisos específicos por rol implementados
+- Cada usuario solo ve sus propios datos
 - Los filtros de fecha son validados automáticamente
 
 📊 EJEMPLOS DE USO:
@@ -122,4 +188,8 @@ urlpatterns = [
 - GET /api/reports/doctors/popular/?start_date=2024-01-01
 - GET /api/reports/cancellations/metrics/
 - GET /api/reports/dashboard/summary/
+- GET /api/reports/dashboard/doctor/
+- GET /api/reports/dashboard/secretary/
+- GET /api/reports/dashboard/admin/
+- GET /api/reports/dashboard/client/
 """

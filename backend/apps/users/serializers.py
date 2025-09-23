@@ -57,19 +57,31 @@ class CustomTokenObtainPairSerializer(serializers.Serializer):
                     print(f"Debug - Access token: {type(access_token)}")
                     
                     # Preparar la respuesta con tokens y datos del usuario
+                    user_data = {
+                        'id': user.id,
+                        'username': user.username,
+                        'email': user.email,
+                        'first_name': user.first_name,
+                        'last_name': user.last_name,
+                        'role': user.role,
+                        'is_staff': user.is_staff,
+                        'is_superuser': user.is_superuser,
+                    }
+                    
+                    # Si el usuario es un paciente, incluir el patient_profile_id
+                    if user.role == 'client':
+                        try:
+                            from apps.patients.models import Patient
+                            patient_profile = Patient.objects.get(user=user)
+                            user_data['patient_profile_id'] = patient_profile.id
+                        except Patient.DoesNotExist:
+                            # Si no tiene perfil de paciente, no incluir el campo
+                            pass
+                    
                     data = {
                         'refresh': str(refresh),
                         'access': str(access_token),
-                        'user': {
-                            'id': user.id,
-                            'username': user.username,
-                            'email': user.email,
-                            'first_name': user.first_name,
-                            'last_name': user.last_name,
-                            'role': user.role,
-                            'is_staff': user.is_staff,
-                            'is_superuser': user.is_superuser,
-                        }
+                        'user': user_data
                     }
                     
                     print(f"Debug - Data preparada: {data}")
@@ -160,19 +172,38 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     """
     Serializer para mostrar información del usuario.
+    Incluye soporte para todos los roles: client, doctor, secretary, admin, superadmin.
     """
     full_name = serializers.CharField(source='get_full_name', read_only=True)
+    is_doctor = serializers.BooleanField(read_only=True)
+    is_secretary = serializers.BooleanField(read_only=True)
+    is_client = serializers.BooleanField(read_only=True)
+    is_admin = serializers.BooleanField(read_only=True)
+    is_superadmin = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = User
         fields = (
             'id', 'username', 'email', 'first_name', 'last_name', 'full_name',
             'phone', 'role', 'date_of_birth', 'address', 'is_active',
-            'is_staff', 'is_superuser', 'created_at', 'updated_at'
+            'is_staff', 'is_superuser', 'created_at', 'updated_at',
+            'is_doctor', 'is_secretary', 'is_client', 'is_admin', 'is_superadmin'
         )
         read_only_fields = (
-            'id', 'username', 'is_staff', 'is_superuser', 'created_at', 'updated_at'
+            'id', 'username', 'is_staff', 'is_superuser', 'created_at', 'updated_at',
+            'is_doctor', 'is_secretary', 'is_client', 'is_admin', 'is_superadmin'
         )
+    
+    def validate_role(self, value):
+        """
+        Validar que el rol sea uno de los permitidos.
+        """
+        valid_roles = ['client', 'doctor', 'secretary', 'admin', 'superadmin']
+        if value not in valid_roles:
+            raise serializers.ValidationError(
+                f"Rol inválido. Los roles permitidos son: {', '.join(valid_roles)}"
+            )
+        return value
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -417,3 +448,104 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             'message': 'Contraseña cambiada exitosamente.',
             'user_id': user.id
         }
+
+
+class SecretaryProfileSerializer(serializers.ModelSerializer):
+    """
+    Serializer para el perfil completo del secretario/a.
+    Incluye información del usuario y campos específicos del secretario.
+    Compatible con la interfaz SecretaryProfile del frontend.
+    """
+    # Campos del usuario relacionado
+    user = UserSerializer(read_only=True)
+    full_name = serializers.CharField(source='get_full_name', read_only=True)
+    shift_duration = serializers.SerializerMethodField()
+    is_working_now = serializers.SerializerMethodField()
+    permissions_summary = serializers.CharField(source='get_permissions_summary', read_only=True)
+    
+    class Meta:
+        from .models import SecretaryProfile
+        model = SecretaryProfile
+        fields = [
+            'id',
+            'user',
+            'full_name',
+            'employee_id',
+            'department',
+            'shift_start',
+            'shift_end',
+            'shift_duration',
+            'is_working_now',
+            'can_manage_appointments',
+            'can_manage_patients',
+            'permissions_summary',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'full_name', 'shift_duration', 'is_working_now', 'permissions_summary']
+
+    def get_shift_duration(self, obj):
+        """
+        Retorna la duración del turno en horas.
+        """
+        try:
+            return obj.get_shift_duration()
+        except Exception:
+            return 0
+
+    def get_is_working_now(self, obj):
+        """
+        Retorna si la secretaria está trabajando actualmente.
+        """
+        try:
+            return obj.is_working_now()
+        except Exception:
+            return False
+
+    def validate_employee_id(self, value):
+        """
+        Valida que el employee_id sea único.
+        """
+        from .models import SecretaryProfile
+        if SecretaryProfile.objects.filter(employee_id=value).exclude(pk=self.instance.pk if self.instance else None).exists():
+            raise serializers.ValidationError(
+                "Ya existe un secretario con este ID de empleado."
+            )
+        return value
+
+    def validate_shift_times(self, attrs):
+        """
+        Valida que los horarios de turno sean coherentes.
+        """
+        shift_start = attrs.get('shift_start')
+        shift_end = attrs.get('shift_end')
+        
+        if shift_start and shift_end:
+            # Permitir turnos que cruzan medianoche
+            if shift_start == shift_end:
+                raise serializers.ValidationError(
+                    "La hora de inicio y fin del turno no pueden ser iguales."
+                )
+        
+        return attrs
+
+    def validate(self, attrs):
+        """
+        Validación general del serializer.
+        """
+        attrs = self.validate_shift_times(attrs)
+        return attrs
+
+    def to_representation(self, instance):
+        """
+        Personaliza la representación del serializer.
+        """
+        data = super().to_representation(instance)
+        
+        # Formatear las horas para mejor legibilidad
+        if data.get('shift_start'):
+            data['shift_start_formatted'] = instance.shift_start.strftime('%H:%M')
+        if data.get('shift_end'):
+            data['shift_end_formatted'] = instance.shift_end.strftime('%H:%M')
+        
+        return data

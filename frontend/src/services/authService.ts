@@ -8,7 +8,20 @@ import type {
   AuthResponse,
   UpdateProfileData,
   ChangePasswordData
-} from '@/types/auth';
+} from '../types/auth';
+
+// Tipo para errores de API
+interface ApiError {
+  response?: {
+    data?: {
+      error?: string;
+      detail?: string;
+      message?: string;
+    };
+    status?: number;
+  };
+  message?: string;
+}
 
 /**
  * Servicio para manejar todas las operaciones de autenticación
@@ -47,14 +60,15 @@ export const authService = {
         refreshToken: backendData.refresh,
         expiresIn: 3600 // 1 hora por defecto
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Error en authService.login:', error);
-      console.error('Error response:', error.response);
-      console.error('Error data:', error.response?.data);
+      console.error('Error response:', apiError.response);
+      console.error('Error data:', apiError.response?.data);
       
-      const errorMessage = error.response?.data?.error || 
-                          error.response?.data?.message || 
-                          error.message || 
+      const errorMessage = apiError.response?.data?.error || 
+                          apiError.response?.data?.message || 
+                          apiError.message || 
                           'Error al iniciar sesión';
       
       throw new Error(errorMessage);
@@ -107,34 +121,14 @@ export const authService = {
         refreshToken: backendResponse.tokens.refresh,
         expiresIn: 3600 // 1 hora por defecto
       };
-    } catch (error: any) {
-      console.error('❌ Error en authService.register:', error);
-      console.error('Error response:', error.response);
-      console.error('Error data:', error.response?.data);
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      console.error('Error en authService.register:', apiError);
       
-      // Manejar errores específicos del backend
-      let errorMessage = 'Error al registrar usuario';
-      
-      if (error.response?.data) {
-        const errorData = error.response.data;
-        
-        // Si hay errores de validación específicos
-        if (errorData.username) {
-          errorMessage = `Username: ${errorData.username[0]}`;
-        } else if (errorData.email) {
-          errorMessage = `Email: ${errorData.email[0]}`;
-        } else if (errorData.password) {
-          errorMessage = `Contraseña: ${errorData.password[0]}`;
-        } else if (errorData.password_confirm) {
-          errorMessage = `Confirmación: ${errorData.password_confirm[0]}`;
-        } else if (errorData.non_field_errors) {
-          errorMessage = errorData.non_field_errors[0];
-        } else if (errorData.detail) {
-          errorMessage = errorData.detail;
-        } else if (errorData.message) {
-          errorMessage = errorData.message;
-        }
-      }
+      const errorMessage = apiError.response?.data?.error || 
+                          apiError.response?.data?.detail || 
+                          apiError.message || 
+                          'Error al registrar usuario';
       
       throw new Error(errorMessage);
     }
@@ -146,9 +140,10 @@ export const authService = {
   logout: async (): Promise<void> => {
     try {
       await api.post('/users/auth/logout/');
-    } catch (error: any) {
-      // Incluso si falla la llamada al servidor, limpiamos el token local
-      console.warn('Error al cerrar sesión en el servidor:', error.message);
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      console.error('Error en authService.logout:', apiError);
+      throw new Error('Error al cerrar sesión');
     }
   },
 
@@ -161,8 +156,10 @@ export const authService = {
         refresh: refreshToken
       });
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Error al renovar token');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      console.error('Error en authService.refreshToken:', apiError);
+      throw new Error('Error al renovar token');
     }
   },
 
@@ -173,8 +170,10 @@ export const authService = {
     try {
       const response = await api.get<User>('/users/profile/');
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Error al obtener perfil');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      console.error('Error en authService.getCurrentUser:', apiError);
+      throw new Error('Error al obtener usuario actual');
     }
   },
 
@@ -185,8 +184,10 @@ export const authService = {
     try {
       const response = await api.patch<User>('/users/profile/', profileData);
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Error al actualizar perfil');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      console.error('Error en authService.updateProfile:', apiError);
+      throw new Error('Error al actualizar perfil');
     }
   },
 
@@ -196,8 +197,10 @@ export const authService = {
   changePassword: async (passwordData: ChangePasswordData): Promise<void> => {
     try {
       await api.post('/users/change-password/', passwordData);
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Error al cambiar contraseña');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      console.error('Error en authService.changePassword:', apiError);
+      throw new Error('Error al cambiar contraseña');
     }
   },
 
@@ -207,8 +210,10 @@ export const authService = {
   forgotPassword: async (email: string): Promise<void> => {
     try {
       await api.post('/auth/forgot-password/', { email });
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Error al solicitar restablecimiento');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      console.error('Error en authService.requestPasswordReset:', apiError);
+      throw new Error('Error al solicitar restablecimiento de contraseña');
     }
   },
 
@@ -221,20 +226,50 @@ export const authService = {
         token,
         password: newPassword
       });
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Error al restablecer contraseña');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      console.error('Error en authService.resetPassword:', apiError);
+      throw new Error('Error al restablecer contraseña');
     }
   },
 
   /**
-   * Verificar si el token es válido
+   * Verificar si un token es válido
    */
   verifyToken: async (token: string): Promise<boolean> => {
     try {
-      await api.post('/users/auth/verify/', { token });
+      await api.post('/users/auth/verify-token/', { token });
       return true;
     } catch (error) {
       return false;
+    }
+  },
+
+  /**
+   * Autenticación con Google OAuth
+   */
+  googleAuth: async (googleData: { credential: string; mode: 'login' | 'register' }): Promise<{
+    success: boolean;
+    data?: { access: string; refresh: string; user: User };
+    error?: string;
+  }> => {
+    try {
+      const response = await api.post('/users/auth/google/', {
+        credential: googleData.credential,
+        mode: googleData.mode
+      });
+      
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      console.error('Error en Google Auth:', apiError);
+      return {
+        success: false,
+        error: apiError.response?.data?.error || apiError.message || 'Error en autenticación con Google'
+      };
     }
   }
 };

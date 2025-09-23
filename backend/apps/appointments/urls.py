@@ -5,7 +5,7 @@ from .views import AppointmentViewSet
 
 # Router para ViewSets
 router = DefaultRouter()
-router.register(r'appointments', AppointmentViewSet, basename='appointment')
+router.register(r'', AppointmentViewSet, basename='appointment')
 
 app_name = 'appointments'
 
@@ -24,7 +24,7 @@ Estructura de URLs resultante:
 /api/appointments/{id}/cancel/          - POST (cancelar cita)
 /api/appointments/{id}/complete/        - POST (completar cita)
 /api/appointments/{id}/reschedule/      - POST (reprogramar cita)
-/api/appointments/patient_history/      - GET (historial de citas de un paciente)
+/api/appointments/patient-history/      - GET (historial de citas de un paciente)
 /api/appointments/doctor_schedule/      - GET (agenda de un doctor)
 /api/appointments/available_slots/      - GET (horarios disponibles)
 

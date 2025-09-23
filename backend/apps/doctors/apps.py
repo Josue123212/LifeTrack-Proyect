@@ -7,4 +7,4 @@ class DoctorsConfig(AppConfig):
     verbose_name = 'Gestión de Doctores'
     
     def ready(self):
-        pass
+        import apps.doctors.signals

@@ -34,12 +34,18 @@ urlpatterns = [
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     path('api/status/', api_status, name='api-status'),
     
-    # API URLs - Apps
+    # Authentication URLs (comentado temporalmente para pruebas)
+    # path('api/auth/', include('dj_rest_auth.urls')),
+    # path('api/auth/registration/', include('dj_rest_auth.registration.urls')),
+    # path('api/auth/social/', include('allauth.socialaccount.urls')),
+    
+    # API endpoints
     path('api/users/', include('apps.users.urls')),
     path('api/patients/', include('apps.patients.urls')),
     path('api/doctors/', include('apps.doctors.urls')),
     path('api/appointments/', include('apps.appointments.urls')),
     path('api/reports/', include('apps.reports.urls')),
+    path('api/notifications/', include('apps.notifications.urls')),
 ]
 
 # Servir archivos media en desarrollo

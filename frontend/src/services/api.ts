@@ -15,8 +15,8 @@ const api = axios.create({
 // 🔧 INTERCEPTOR DE REQUEST: Agregar token de autenticación automáticamente
 api.interceptors.request.use(
   (config) => {
-    // Obtener token del localStorage
-    const token = localStorage.getItem('token');
+    // Obtener token del localStorage (corregido para usar 'accessToken')
+    const token = localStorage.getItem('accessToken');
     
     // Si existe token, agregarlo al header Authorization
     if (token) {
@@ -62,10 +62,12 @@ api.interceptors.response.use(
         case 401:
           // Token expirado o inválido
           console.warn('🔒 Token expirado o inválido');
-          localStorage.removeItem('token');
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
-          // Redirigir al login (se puede implementar con React Router)
-          window.location.href = '/login';
+          // Nota: En un entorno real, esto debería manejarse con React Router
+          // Por ahora comentamos la redirección para evitar errores en desarrollo
+          // window.location.href = '/login';
           break;
           
         case 403:
@@ -118,32 +120,32 @@ export interface ApiError {
 // 🚀 FUNCIONES HELPER para operaciones comunes
 export const apiHelpers = {
   // GET request con tipado
-  get: <T = any>(url: string, params?: any): Promise<T> => {
+  get: <T = unknown>(url: string, params?: Record<string, unknown>): Promise<T> => {
     return api.get(url, { params }).then(response => response.data);
   },
   
   // POST request con tipado
-  post: <T = any>(url: string, data?: any): Promise<T> => {
+  post: <T = unknown>(url: string, data?: unknown): Promise<T> => {
     return api.post(url, data).then(response => response.data);
   },
   
   // PUT request con tipado
-  put: <T = any>(url: string, data?: any): Promise<T> => {
+  put: <T = unknown>(url: string, data?: unknown): Promise<T> => {
     return api.put(url, data).then(response => response.data);
   },
   
   // PATCH request con tipado
-  patch: <T = any>(url: string, data?: any): Promise<T> => {
+  patch: <T = unknown>(url: string, data?: unknown): Promise<T> => {
     return api.patch(url, data).then(response => response.data);
   },
   
   // DELETE request con tipado
-  delete: <T = any>(url: string): Promise<T> => {
+  delete: <T = unknown>(url: string): Promise<T> => {
     return api.delete(url).then(response => response.data);
   },
   
   // Upload de archivos
-  upload: <T = any>(url: string, file: File, onProgress?: (progress: number) => void): Promise<T> => {
+  upload: <T = unknown>(url: string, file: File, onProgress?: (progress: number) => void): Promise<T> => {
     const formData = new FormData();
     formData.append('file', file);
     

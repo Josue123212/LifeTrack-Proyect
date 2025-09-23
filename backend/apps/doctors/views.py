@@ -1,9 +1,11 @@
 from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from django.db.models import Q, Count, Avg
 from django.utils import timezone
 from datetime import datetime, timedelta, time
+from decimal import Decimal, InvalidOperation
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
@@ -13,10 +15,12 @@ from .serializers import (
     DoctorCreateSerializer,
     DoctorUpdateSerializer,
     DoctorListSerializer,
-    DoctorPublicSerializer
+    DoctorPublicSerializer,
+    DoctorProfileSerializer
 )
 from apps.appointments.filters import DoctorFilter
 from apps.appointments.models import Appointment
+from core.permissions import IsDoctor, IsDoctorOrAdmin, IsAdminOrSuperAdmin
 
 
 class DoctorViewSet(viewsets.ModelViewSet):
@@ -66,7 +70,7 @@ class DoctorViewSet(viewsets.ModelViewSet):
         'user__first_name',
         'user__last_name',
         'specialization',
-        'license_number',
+        'medical_license',
     ]
     
     # Configuración de ordenamiento
@@ -97,9 +101,25 @@ class DoctorViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """
         Instancia y retorna la lista de permisos requeridos para esta vista.
+        Implementa permisos granulares según el rol del usuario.
         """
+        # Endpoints públicos (sin autenticación requerida)
         if self.action in ['list', 'retrieve', 'public_profile', 'available_slots']:
             permission_classes = [permissions.AllowAny]
+        
+        # Endpoints que requieren ser doctor o admin
+        elif self.action in ['schedule', 'statistics', 'toggle_availability']:
+            permission_classes = [IsDoctorOrAdmin]
+        
+        # Endpoints de creación y eliminación (solo admin)
+        elif self.action in ['create', 'destroy']:
+            permission_classes = [permissions.IsAuthenticated, IsAdminOrSuperAdmin]
+        
+        # Endpoints de actualización (doctor propietario o admin)
+        elif self.action in ['update', 'partial_update']:
+            permission_classes = [permissions.IsAuthenticated, IsDoctorOrAdmin]
+        
+        # Por defecto, requiere autenticación
         else:
             permission_classes = [permissions.IsAuthenticated]
         
@@ -118,7 +138,7 @@ class DoctorViewSet(viewsets.ModelViewSet):
                 Q(user__first_name__icontains=search) |
                 Q(user__last_name__icontains=search) |
                 Q(specialization__icontains=search) |
-                Q(license_number__icontains=search)
+                Q(medical_license__icontains=search)
             )
         
         # Filtro por especialización
@@ -151,7 +171,7 @@ class DoctorViewSet(viewsets.ModelViewSet):
         min_experience = self.request.query_params.get('min_experience', None)
         if min_experience:
             try:
-                queryset = queryset.filter(experience_years__gte=int(min_experience))
+                queryset = queryset.filter(years_experience__gte=int(min_experience))
             except ValueError:
                 pass
         
@@ -210,6 +230,177 @@ class DoctorViewSet(viewsets.ModelViewSet):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class DoctorListViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet para endpoints públicos de listado de doctores.
+    
+    Endpoints implementados:
+    - GET /api/doctors/public/ - Listar doctores disponibles (público)
+    - GET /api/doctors/public/{id}/ - Obtener doctor específico (público)
+    - GET /api/doctors/public/specializations/ - Listar especializaciones
+    - GET /api/doctors/public/search/ - Buscar doctores
+    """
+    queryset = Doctor.objects.filter(is_available=True).select_related('user')
+    serializer_class = DoctorPublicSerializer
+    permission_classes = [AllowAny]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['specialization', 'is_available']
+    search_fields = ['user__first_name', 'user__last_name', 'specialization', 'bio']
+    ordering_fields = ['user__first_name', 'user__last_name', 'specialization', 'consultation_fee']
+    ordering = ['user__first_name']
+    
+    def get_queryset(self):
+        """Filtrar solo doctores disponibles para endpoints públicos."""
+        return Doctor.objects.filter(
+            is_available=True,
+            user__is_active=True
+        ).select_related('user')
+    
+    @action(detail=False, methods=['get'], url_path='specializations')
+    def specializations(self, request):
+        """
+        GET /api/doctors/public/specializations/
+        Obtener lista de todas las especializaciones disponibles.
+        """
+        specializations = Doctor.objects.filter(
+            is_available=True,
+            user__is_active=True
+        ).values_list('specialization', flat=True).distinct().order_by('specialization')
+        
+        # Filtrar valores vacíos o None
+        specializations = [spec for spec in specializations if spec and spec.strip()]
+        
+        return Response(
+            {
+                'message': 'Especializaciones obtenidas exitosamente',
+                'data': {
+                    'specializations': list(specializations),
+                    'total_specializations': len(specializations)
+                }
+            },
+            status=status.HTTP_200_OK
+        )
+    
+    @action(detail=False, methods=['get'], url_path='search')
+    def search_doctors(self, request):
+        """
+        GET /api/doctors/public/search/
+        Buscar doctores con filtros avanzados.
+        
+        Parámetros de búsqueda:
+        - q: término de búsqueda general
+        - specialization: filtrar por especialización
+        - min_fee: tarifa mínima de consulta
+        - max_fee: tarifa máxima de consulta
+        - available_only: solo doctores disponibles (default: true)
+        """
+        queryset = self.get_queryset()
+        
+        # Parámetros de búsqueda
+        search_term = request.query_params.get('q', '').strip()
+        specialization = request.query_params.get('specialization', '').strip()
+        min_fee = request.query_params.get('min_fee', None)
+        max_fee = request.query_params.get('max_fee', None)
+        available_only = request.query_params.get('available_only', 'true').lower() == 'true'
+        
+        # Aplicar filtros
+        if search_term:
+            queryset = queryset.filter(
+                Q(user__first_name__icontains=search_term) |
+                Q(user__last_name__icontains=search_term) |
+                Q(specialization__icontains=search_term) |
+                Q(bio__icontains=search_term)
+            )
+        
+        if specialization:
+            queryset = queryset.filter(specialization__icontains=specialization)
+        
+        if min_fee:
+            try:
+                min_fee_decimal = Decimal(min_fee)
+                queryset = queryset.filter(consultation_fee__gte=min_fee_decimal)
+            except (ValueError, InvalidOperation):
+                return Response(
+                    {
+                        'error': 'Parámetro inválido',
+                        'detail': 'min_fee debe ser un número válido'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        if max_fee:
+            try:
+                max_fee_decimal = Decimal(max_fee)
+                queryset = queryset.filter(consultation_fee__lte=max_fee_decimal)
+            except (ValueError, InvalidOperation):
+                return Response(
+                    {
+                        'error': 'Parámetro inválido',
+                        'detail': 'max_fee debe ser un número válido'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        if not available_only:
+            # Si no se requiere solo disponibles, incluir todos los doctores activos
+            queryset = Doctor.objects.filter(user__is_active=True).select_related('user')
+            # Reaplicar filtros anteriores
+            if search_term:
+                queryset = queryset.filter(
+                    Q(user__first_name__icontains=search_term) |
+                    Q(user__last_name__icontains=search_term) |
+                    Q(specialization__icontains=search_term) |
+                    Q(bio__icontains=search_term)
+                )
+            if specialization:
+                queryset = queryset.filter(specialization__icontains=specialization)
+            if min_fee:
+                queryset = queryset.filter(consultation_fee__gte=Decimal(min_fee))
+            if max_fee:
+                queryset = queryset.filter(consultation_fee__lte=Decimal(max_fee))
+        
+        # Ordenar resultados
+        ordering = request.query_params.get('ordering', 'user__first_name')
+        if ordering in ['user__first_name', '-user__first_name', 'user__last_name', '-user__last_name', 
+                       'specialization', '-specialization', 'consultation_fee', '-consultation_fee']:
+            queryset = queryset.order_by(ordering)
+        
+        # Paginación
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response({
+                'message': 'Búsqueda de doctores realizada exitosamente',
+                'data': serializer.data,
+                'search_params': {
+                    'search_term': search_term,
+                    'specialization': specialization,
+                    'min_fee': min_fee,
+                    'max_fee': max_fee,
+                    'available_only': available_only,
+                    'ordering': ordering
+                }
+            })
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(
+            {
+                'message': 'Búsqueda de doctores realizada exitosamente',
+                'data': serializer.data,
+                'total_results': queryset.count(),
+                'search_params': {
+                    'search_term': search_term,
+                    'specialization': specialization,
+                    'min_fee': min_fee,
+                    'max_fee': max_fee,
+                    'available_only': available_only,
+                    'ordering': ordering
+                }
+            },
+            status=status.HTTP_200_OK
+        )
     
     def partial_update(self, request, *args, **kwargs):
         """
@@ -443,7 +634,7 @@ class DoctorViewSet(viewsets.ModelViewSet):
             'doctor_info': {
                 'full_name': doctor.full_name,
                 'specialization': doctor.specialization,
-                'experience_years': doctor.experience_years,
+                'years_experience': doctor.years_experience,
                 'consultation_fee': doctor.consultation_fee,
                 'is_available': doctor.is_available
             },
@@ -536,7 +727,7 @@ class DoctorViewSet(viewsets.ModelViewSet):
             status='completed'
         ).count()
         
-        years_practicing = doctor.experience_years
+        years_practicing = doctor.years_experience
         
         public_data = serializer.data
         public_data.update({
@@ -553,4 +744,339 @@ class DoctorViewSet(viewsets.ModelViewSet):
                 'data': public_data
             },
             status=status.HTTP_200_OK
+        )
+
+
+class DoctorProfileViewSet(viewsets.ViewSet):
+    """
+    ViewSet específico para el perfil del doctor logueado.
+    
+    Endpoints implementados:
+    - GET /api/doctors/me/ - Obtener perfil del doctor logueado
+    - PUT /api/doctors/me/ - Actualizar perfil del doctor logueado
+    - GET /api/doctors/me/appointments/ - Obtener citas del doctor
+    - GET /api/doctors/me/schedule/ - Obtener horario del doctor
+    - PUT /api/doctors/me/availability/ - Cambiar disponibilidad
+    """
+    permission_classes = [IsDoctor]
+    
+    def get_doctor_profile(self):
+        """Helper method para obtener el perfil del doctor logueado."""
+        try:
+            return self.request.user.doctor
+        except Doctor.DoesNotExist:
+            return None
+    
+    @action(detail=False, methods=['get', 'put'], url_path='')
+    def me(self, request):
+        """
+        GET /api/doctors/me/ - Obtener el perfil completo del doctor logueado.
+        PUT /api/doctors/me/ - Actualizar el perfil del doctor logueado.
+        """
+        doctor = self.get_doctor_profile()
+        
+        if not doctor:
+            return Response(
+                {
+                    'error': 'Perfil de doctor no encontrado',
+                    'detail': 'El usuario actual no tiene un perfil de doctor asociado'
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        if request.method == 'GET':
+            serializer = DoctorProfileSerializer(doctor)
+            return Response(
+                {
+                    'message': 'Perfil de doctor obtenido exitosamente',
+                    'data': serializer.data
+                },
+                status=status.HTTP_200_OK
+            )
+        
+        elif request.method == 'PUT':
+            serializer = DoctorProfileSerializer(doctor, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(
+                    {
+                        'message': 'Perfil de doctor actualizado exitosamente',
+                        'data': serializer.data
+                    },
+                    status=status.HTTP_200_OK
+                )
+            
+            return Response(
+                {
+                    'error': 'Datos inválidos',
+                    'detail': serializer.errors
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    
+    @action(detail=False, methods=['get'], url_path='appointments')
+    def my_appointments(self, request):
+        """
+        GET /api/doctors/me/appointments/
+        Obtener todas las citas del doctor logueado.
+        """
+        doctor = self.get_doctor_profile()
+        if not doctor:
+            return Response(
+                {
+                    'error': 'Perfil de doctor no encontrado',
+                    'detail': 'El usuario actual no tiene un perfil de doctor asociado'
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Filtros opcionales
+        status_filter = request.query_params.get('status', None)
+        date_from = request.query_params.get('date_from', None)
+        date_to = request.query_params.get('date_to', None)
+        
+        # Construir queryset
+        appointments = Appointment.objects.filter(doctor=doctor).select_related(
+            'patient__user', 'doctor__user'
+        ).order_by('-date', '-time')
+        
+        # Aplicar filtros
+        if status_filter:
+            appointments = appointments.filter(status=status_filter)
+        
+        if date_from:
+            try:
+                date_from_parsed = datetime.strptime(date_from, '%Y-%m-%d').date()
+                appointments = appointments.filter(date__gte=date_from_parsed)
+            except ValueError:
+                return Response(
+                    {
+                        'error': 'Formato de fecha inválido',
+                        'detail': 'Use el formato YYYY-MM-DD para date_from'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        if date_to:
+            try:
+                date_to_parsed = datetime.strptime(date_to, '%Y-%m-%d').date()
+                appointments = appointments.filter(date__lte=date_to_parsed)
+            except ValueError:
+                return Response(
+                    {
+                        'error': 'Formato de fecha inválido',
+                        'detail': 'Use el formato YYYY-MM-DD para date_to'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Serializar datos
+        appointments_data = []
+        for appointment in appointments:
+            appointments_data.append({
+                'id': appointment.id,
+                'patient': {
+                    'id': appointment.patient.id,
+                    'name': appointment.patient.user.get_full_name(),
+                    'email': appointment.patient.user.email
+                },
+                'appointment_date': appointment.appointment_date.isoformat(),
+                'appointment_time': appointment.appointment_time.strftime('%H:%M'),
+                'status': appointment.status,
+                'reason': appointment.reason,
+                'notes': appointment.notes,
+                'created_at': appointment.created_at.isoformat()
+            })
+        
+        return Response(
+            {
+                'message': 'Citas del doctor obtenidas exitosamente',
+                'data': {
+                    'doctor': {
+                        'id': doctor.id,
+                        'name': doctor.full_name,
+                        'specialization': doctor.specialization
+                    },
+                    'appointments': appointments_data,
+                    'total_appointments': len(appointments_data),
+                    'filters_applied': {
+                        'status': status_filter,
+                        'date_from': date_from,
+                        'date_to': date_to
+                    }
+                }
+            },
+            status=status.HTTP_200_OK
+        )
+    
+    @action(detail=False, methods=['get'], url_path='schedule')
+    def my_schedule(self, request):
+        """
+        GET /api/doctors/me/schedule/
+        Obtener el horario de trabajo del doctor logueado.
+        """
+        doctor = self.get_doctor_profile()
+        if not doctor:
+            return Response(
+                {
+                    'error': 'Perfil de doctor no encontrado',
+                    'detail': 'El usuario actual no tiene un perfil de doctor asociado'
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        schedule_data = {
+            'doctor': {
+                'id': doctor.id,
+                'name': doctor.full_name,
+                'specialization': doctor.specialization
+            },
+            'work_schedule': {
+                'start_time': doctor.work_start_time.strftime('%H:%M') if doctor.work_start_time else None,
+                'end_time': doctor.work_end_time.strftime('%H:%M') if doctor.work_end_time else None,
+                'work_days': doctor.work_days,
+                'formatted_schedule': doctor.get_work_schedule()
+            },
+            'availability': {
+                'is_available': doctor.is_available,
+                'consultation_fee': str(doctor.consultation_fee)
+            }
+        }
+        
+        return Response(
+            {
+                'message': 'Horario del doctor obtenido exitosamente',
+                'data': schedule_data
+            },
+            status=status.HTTP_200_OK
+        )
+    
+    @action(detail=False, methods=['put'], url_path='availability')
+    def update_availability(self, request):
+        """
+        PUT /api/doctors/me/availability/
+        Cambiar el estado de disponibilidad del doctor.
+        """
+        doctor = self.get_doctor_profile()
+        if not doctor:
+            return Response(
+                {
+                    'error': 'Perfil de doctor no encontrado',
+                    'detail': 'El usuario actual no tiene un perfil de doctor asociado'
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Obtener nuevo estado de disponibilidad
+        is_available = request.data.get('is_available', None)
+        
+        if is_available is None:
+            return Response(
+                {
+                    'error': 'Parámetro requerido',
+                    'detail': 'Debe proporcionar el campo is_available (true/false)'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validar tipo de dato
+        if not isinstance(is_available, bool):
+            return Response(
+                {
+                    'error': 'Tipo de dato inválido',
+                    'detail': 'El campo is_available debe ser un valor booleano (true/false)'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Actualizar disponibilidad
+        old_availability = doctor.is_available
+        doctor.is_available = is_available
+        doctor.save(update_fields=['is_available', 'updated_at'])
+        
+        return Response(
+            {
+                'message': 'Disponibilidad actualizada exitosamente',
+                'data': {
+                    'doctor': {
+                        'id': doctor.id,
+                        'name': doctor.full_name,
+                        'specialization': doctor.specialization
+                    },
+                    'availability': {
+                        'previous_status': old_availability,
+                        'current_status': doctor.is_available,
+                        'updated_at': doctor.updated_at.isoformat()
+                    }
+                }
+            },
+            status=status.HTTP_200_OK
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_doctors_list(request):
+    """Vista de función para listar doctores públicos disponibles"""
+    doctors = Doctor.objects.filter(
+        is_available=True,
+        user__is_active=True
+    ).select_related('user')
+    
+    serializer = DoctorPublicSerializer(doctors, many=True)
+    return Response({
+        'count': doctors.count(),
+        'results': serializer.data
+    })
+
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsDoctor])
+def doctor_me_view(request):
+    """
+    Vista de función para el perfil del doctor logueado.
+    
+    GET /api/doctors/me/ - Obtener perfil del doctor logueado
+    PUT /api/doctors/me/ - Actualizar perfil del doctor logueado
+    """
+    try:
+        doctor = request.user.doctor
+    except Doctor.DoesNotExist:
+        return Response(
+            {
+                'error': 'Perfil de doctor no encontrado',
+                'detail': 'El usuario actual no tiene un perfil de doctor asociado'
+            },
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    if request.method == 'GET':
+        serializer = DoctorProfileSerializer(doctor)
+        return Response(
+            {
+                'message': 'Perfil de doctor obtenido exitosamente',
+                'data': serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
+    
+    elif request.method == 'PUT':
+        serializer = DoctorProfileSerializer(doctor, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {
+                    'message': 'Perfil de doctor actualizado exitosamente',
+                    'data': serializer.data
+                },
+                status=status.HTTP_200_OK
+            )
+        
+        return Response(
+            {
+                'error': 'Datos inválidos',
+                'detail': serializer.errors
+            },
+            status=status.HTTP_400_BAD_REQUEST
         )

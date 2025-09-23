@@ -1,16 +1,25 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from .views import DoctorViewSet, DoctorProfileViewSet, DoctorListViewSet, public_doctors_list, doctor_me_view
 
-from .views import DoctorViewSet
-
-# Router para ViewSets
+# Router principal para DoctorViewSet
 router = DefaultRouter()
-router.register(r'doctors', DoctorViewSet, basename='doctor')
+router.register(r'', DoctorViewSet, basename='doctor')
+
+# Router separado para DoctorProfileViewSet (para otros endpoints)
+profile_router = DefaultRouter()
+profile_router.register(r'', DoctorProfileViewSet, basename='doctor-profile')
 
 app_name = 'doctors'
 
 urlpatterns = [
-    # Router de DRF (ViewSet) - Rutas principales
+    # Ruta simple para doctores públicos (debe ir ANTES del router)
+    path('public/', public_doctors_list, name='doctor-public-list'),
+    # Ruta directa para el perfil del doctor
+    path('me/', doctor_me_view, name='doctor-me'),
+    # Router para otros endpoints de perfil de doctor
+    path('me/', include(profile_router.urls)),
+    # Router principal de DRF (ViewSet) - Rutas principales
     path('', include(router.urls)),
 ]
 

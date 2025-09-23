@@ -1,9 +1,9 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/Button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { useAuth } from '@/contexts/AuthContext';
-import UnauthorizedPage from '@/pages/UnauthorizedPage';
+import { Button } from '../ui/Button';
+import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
+import { useAuth } from '../../contexts/AuthContext';
+import UnauthorizedPage from '../../pages/UnauthorizedPage';
 
 /**
  * 🛡️ COMPONENTE DE RUTA PROTEGIDA

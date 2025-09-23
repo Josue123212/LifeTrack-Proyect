@@ -61,10 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           <div className="flex items-center flex-shrink-0 px-4 mb-8">
             <div className="flex items-center space-x-3">
               <div 
-                className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-md"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(0, 206, 209, 1) 0%, rgba(0, 150, 199, 1) 100%)'
-                }}
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-md gradient-primary"
               >
                 <span>M</span>
               </div>
@@ -74,22 +71,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </div>
           </div>
           
-          {/* User Info */}
-          <div className="px-4 mb-6">
-            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold">
-                {user?.firstName?.charAt(0) || 'U'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {user?.firstName} {user?.lastName}
-                </p>
-                <p className="text-xs text-gray-500 truncate">
-                  {user?.email}
-                </p>
-              </div>
-            </div>
-          </div>
+
           
           <div className="flex-1 flex flex-col">
             {/* Navigation */}
@@ -144,10 +126,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
             <div className="flex items-center space-x-3">
               <div 
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-md"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(0, 206, 209, 1) 0%, rgba(0, 150, 199, 1) 100%)'
-                }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-md gradient-primary"
               >
                 <span>M</span>
               </div>

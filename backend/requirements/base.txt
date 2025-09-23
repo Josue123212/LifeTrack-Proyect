@@ -5,3 +5,6 @@ django-cors-headers==4.3.1
 python-decouple==3.8
 Pillow==11.3.0
 celery[redis]==5.3.4
+django-allauth==0.57.0
+dj-rest-auth[with_social]==5.0.2
+google-auth==2.23.4

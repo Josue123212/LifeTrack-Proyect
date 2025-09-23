@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { toast } from 'react-hot-toast';
-import { authService, tokenUtils } from '@/services/authService';
-import type { User, LoginData, RegisterData, UpdateProfileData, ChangePasswordData } from '@/types/auth';
+import { authService, tokenUtils } from '../services/authService';
+import type { User, LoginData, RegisterData, UpdateProfileData, ChangePasswordData } from '../types/auth';
 
 // Tipos del contexto
 interface AuthState {

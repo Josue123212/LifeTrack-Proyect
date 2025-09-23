@@ -3,7 +3,7 @@
 /**
  * Roles disponibles en el sistema
  */
-export type UserRole = 'client' | 'admin' | 'superadmin';
+export type UserRole = 'client' | 'doctor' | 'secretary' | 'admin' | 'superadmin';
 
 /**
  * Interface para el usuario autenticado
@@ -19,6 +19,9 @@ export interface User {
   dateJoined: string;
   lastLogin?: string;
   avatar?: string;
+  address?: string;
+  emergencyContact?: string;
+  patient_profile_id?: number; // ID del perfil de paciente (solo para usuarios con role 'client')
 }
 
 /**
@@ -61,6 +64,8 @@ export interface UpdateProfileData {
   lastName?: string;
   phone?: string;
   avatar?: string;
+  address?: string;
+  emergencyContact?: string;
 }
 
 /**

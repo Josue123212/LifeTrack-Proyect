@@ -7,7 +7,8 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useFormValidation } from '../lib/hooks/useFormValidation';
 import { registerSchema, type RegisterFormData } from '../lib/validations';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
+import GoogleAuthButton from '../components/auth/GoogleAuthButton';
 
 /**
  * 📝 Página de Registro de Usuario
@@ -73,10 +74,18 @@ export const RegisterPage: React.FC = () => {
   };
 
   /**
-   * 🎨 Maneja el registro con Google (placeholder)
+   * 🎨 Maneja el éxito del registro con Google
    */
-  const handleGoogleRegister = () => {
-    toast.info('Registro con Google próximamente');
+  const handleGoogleSuccess = () => {
+    toast.success('¡Registro con Google exitoso!');
+    navigate('/dashboard');
+  };
+
+  /**
+   * 🚨 Maneja errores del registro con Google
+   */
+  const handleGoogleError = (error: string) => {
+    toast.error(`Error con Google: ${error}`);
   };
 
   /**
@@ -296,16 +305,11 @@ export const RegisterPage: React.FC = () => {
 
                   {/* Social Login */}
                   <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="lg"
-                      onClick={handleGoogleRegister}
-                      disabled={isLoading}
-                      className="focus:ring-2 focus:ring-offset-2 focus:ring-primary border-primary text-primary hover:bg-primary hover:text-white"
-                    >
-                      🌐 Google
-                    </Button>
+                    <GoogleAuthButton
+                      mode="register"
+                      onSuccess={handleGoogleSuccess}
+                      onError={handleGoogleError}
+                    />
                     <Button
                       type="button"
                       variant="outline"

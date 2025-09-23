@@ -38,7 +38,7 @@ const Layout: React.FC<LayoutProps> = ({ children, showSidebar = true }) => {
       )}
       
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className={`flex-1 flex flex-col overflow-hidden ${showSidebar ? 'lg:ml-72' : ''}`}>
         {/* Header */}
         <Header 
           onMenuClick={() => setSidebarOpen(!sidebarOpen)}
@@ -64,4 +64,5 @@ const Layout: React.FC<LayoutProps> = ({ children, showSidebar = true }) => {
   );
 };
 
+export { Layout };
 export default Layout;

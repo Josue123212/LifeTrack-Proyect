@@ -10,7 +10,9 @@ interface StatsCardProps {
     isPositive: boolean;
     label: string;
   };
-  variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
+  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info';
+  isLoading?: boolean;
+  description?: string;
   onClick?: () => void;
 }
 
@@ -20,67 +22,97 @@ const StatsCard: React.FC<StatsCardProps> = ({
   subtitle,
   icon,
   trend,
-  variant = 'default',
+  color = 'primary',
+  isLoading = false,
+  description,
   onClick
 }) => {
-  const baseClasses = "bg-white rounded-xl lg:rounded-2xl shadow-sm border transition-all duration-300 p-4 sm:p-6";
+  // Clases base usando variables CSS del tema
+  const baseClasses = "bg-white rounded-lg shadow-sm border border-secondary transition-all duration-300 p-6";
   
-  const variantClasses = {
-    default: "border-gray-100 hover:border-gray-200 hover:shadow-md",
-    primary: "border-teal-200 bg-gradient-to-br from-teal-50 to-cyan-50",
-    success: "border-green-200 bg-gradient-to-br from-green-50 to-emerald-50",
-    warning: "border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50",
-    danger: "border-red-200 bg-gradient-to-br from-red-50 to-rose-50"
-  };
-  
-  const iconColors = {
-    default: "text-gray-600",
-    primary: "text-teal-600",
-    success: "text-green-600",
-    warning: "text-yellow-600",
-    danger: "text-red-600"
-  };
-  
-  const valueColors = {
-    default: "text-gray-800",
-    primary: "text-teal-800",
-    success: "text-green-800",
-    warning: "text-yellow-800",
-    danger: "text-red-800"
+  // Colores usando variables CSS del tema
+  const colorClasses = {
+    primary: {
+      icon: "text-primary",
+      value: "text-text-primary",
+      bg: "bg-primary-light",
+      border: "border-primary"
+    },
+    secondary: {
+      icon: "text-secondary",
+      value: "text-text-primary", 
+      bg: "bg-secondary-50",
+      border: "border-secondary"
+    },
+    success: {
+      icon: "text-green-600",
+      value: "text-text-primary",
+      bg: "bg-green-50",
+      border: "border-green-200"
+    },
+    warning: {
+      icon: "text-yellow-600", 
+      value: "text-text-primary",
+      bg: "bg-yellow-50",
+      border: "border-yellow-200"
+    },
+    error: {
+      icon: "text-red-600",
+      value: "text-text-primary", 
+      bg: "bg-red-50",
+      border: "border-red-200"
+    },
+    info: {
+      icon: "text-blue-600",
+      value: "text-text-primary",
+      bg: "bg-blue-50", 
+      border: "border-blue-200"
+    }
   };
 
+  const currentColors = colorClasses[color];
   const Component = onClick ? 'button' : 'div';
-  const clickableClasses = onClick ? 'cursor-pointer hover:scale-105 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2' : '';
+  const clickableClasses = onClick ? 'cursor-pointer hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2' : '';
+
+  // Estado de carga
+  if (isLoading) {
+    return (
+      <div className={`${baseClasses} animate-pulse`}>
+        <div className="flex items-center space-x-3 mb-4">
+          <div className="w-6 h-6 bg-secondary-200 rounded"></div>
+          <div className="h-4 bg-secondary-200 rounded w-24"></div>
+        </div>
+        <div className="h-8 bg-secondary-200 rounded w-16 mb-2"></div>
+        {description && <div className="h-3 bg-secondary-200 rounded w-32"></div>}
+      </div>
+    );
+  }
 
   return (
     <Component
       onClick={onClick}
-      className={`
-        ${baseClasses}
-        ${variantClasses[variant]}
-        ${clickableClasses}
-      `.replace(/\s+/g, ' ').trim()}
+      className={`${baseClasses} ${clickableClasses}`}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <div className="flex items-center space-x-3 mb-3">
+          <div className="flex items-center space-x-3 mb-4">
             {icon && (
-              <div className={`flex-shrink-0 ${iconColors[variant]}`}>
+              <div className={`flex-shrink-0 ${currentColors.icon}`}>
                 {icon}
               </div>
             )}
-            <h3 className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+            <h3 className="text-sm font-medium text-text-secondary uppercase tracking-wide">
               {title}
             </h3>
           </div>
           
-          <div className={`text-2xl sm:text-3xl font-light ${valueColors[variant]} mb-1`}>
+          <div className={`text-3xl font-bold ${currentColors.value} mb-2`}>
             {value}
           </div>
           
-          {subtitle && (
-            <p className="text-sm text-gray-500">
-              {subtitle}
+          {(subtitle || description) && (
+            <p className="text-sm text-text-secondary">
+              {subtitle || description}
             </p>
           )}
         </div>
@@ -102,7 +134,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
               </svg>
               <span>{Math.abs(trend.value)}%</span>
             </div>
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-text-secondary mt-1">
               {trend.label}
             </div>
           </div>
@@ -110,7 +142,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
       </div>
       
       {onClick && (
-        <div className="mt-4 flex items-center text-sm text-teal-600 font-medium">
+        <div className="mt-4 flex items-center text-sm text-primary font-medium">
           <span>Ver detalles</span>
           <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -121,4 +153,4 @@ const StatsCard: React.FC<StatsCardProps> = ({
   );
 };
 
-export default StatsCard;
+export { StatsCard };

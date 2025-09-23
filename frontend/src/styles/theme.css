@@ -35,10 +35,10 @@
 
   /* ===== VARIABLES SEMÁNTICAS ===== */
   /* Estas se heredan automáticamente */
-  --primary: #4722a3;
-  --primary-hover: #b43342;
+  --primary: var(--color-primary-500);
+  --primary-hover: var(--color-primary-600);
   --primary-active: var(--color-primary-700);
-  --primary-light: #D1FAE5;
+  --primary-light: var(--color-primary-50);
   --primary-dark: var(--color-primary-800);
 
   --secondary: var(--color-secondary-500);
@@ -107,7 +107,7 @@
 
 /* 🌈 GRADIENTES HEREDADOS */
 .gradient-primary {
-  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
 }
 
 .gradient-hero {

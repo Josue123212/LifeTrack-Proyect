@@ -1,26 +1,38 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 // Pages
-import HomePage from '@/pages/HomePage';
-import LoginPage from '@/pages/LoginPage';
-import RegisterPage from '@/pages/RegisterPage';
-import DashboardPage from '@/pages/DashboardPage';
-import UnauthorizedPage from '@/pages/UnauthorizedPage';
-import ClientDashboard from '@/pages/dashboard/ClientDashboard';
-import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
-import ResetPasswordPage from '@/pages/ResetPasswordPage';
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import { DashboardPage } from './pages/dashboard/DashboardPage';
+import UnauthorizedPage from './pages/UnauthorizedPage';
+import ClientDashboard from './pages/dashboard/ClientDashboard';
+import DoctorDashboard from './pages/dashboard/DoctorDashboard';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+
+// Client Pages
+import MyAppointmentsPage from './pages/client/MyAppointmentsPage';
+import ProfilePage from './pages/client/ProfilePage';
+import MedicalHistoryPage from './pages/client/MedicalHistoryPage';
 
 // Components
-import { ProtectedRoute, PublicRoute } from '@/components/auth/ProtectedRoute';
-import { useRoleRedirect } from '@/lib/hooks/useRoleRedirect';
+import { ProtectedRoute, PublicRoute } from './components/auth/ProtectedRoute';
+import { useRoleRedirect } from './lib/hooks/useRoleRedirect';
 
 // Test Components (para desarrollo)
-import TestComponent from '@/components/TestComponent';
-import UILibrariesTest from '@/components/UILibrariesTest';
-import UIComponentsTest from '@/components/UIComponentsTest';
-import ReactQueryTest from '@/components/ReactQueryTest';
-import RoleTestComponent from '@/components/RoleTestComponent';
+import TestComponent from './components/TestComponent';
+import UILibrariesTest from './components/UILibrariesTest';
+import UIComponentsTest from './components/UIComponentsTest';
+import ReactQueryTest from './components/ReactQueryTest';
+import RoleTestComponent from './components/RoleTestComponent';
+import AppointmentServiceTest from './test/appointmentService.test';
+import AppointmentList from './pages/appointments/AppointmentList';
+import AppointmentComponents from './pages/appointments/AppointmentComponents';
+import DoctorList from './pages/doctors/DoctorList';
+import DoctorProfile from './pages/doctors/DoctorProfile';
 
 /**
  * 🚀 APLICACIÓN PRINCIPAL
@@ -35,9 +47,11 @@ import RoleTestComponent from '@/components/RoleTestComponent';
  */
 function App() {
   return (
-    <BrowserRouter>
-      <AppRoutes />
-    </BrowserRouter>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </GoogleOAuthProvider>
   );
 }
 
@@ -113,6 +127,24 @@ const AppRoutes: React.FC = () => {
           />
           
           <Route 
+            path="/admin/doctors" 
+            element={
+              <ProtectedRoute requiredRole={['admin']}>
+                <DoctorList />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/admin/doctors/:id" 
+            element={
+              <ProtectedRoute requiredRole={['admin']}>
+                <DoctorProfile />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
             path="/admin/users" 
             element={
               <ProtectedRoute requiredRole={['superadmin']}>
@@ -144,7 +176,7 @@ const AppRoutes: React.FC = () => {
             path="/doctor/dashboard" 
             element={
               <ProtectedRoute requiredRole={['doctor']}>
-                <div className="p-8">Dashboard del Doctor</div>
+                <DoctorDashboard />
               </ProtectedRoute>
             } 
           />
@@ -152,8 +184,8 @@ const AppRoutes: React.FC = () => {
           <Route 
             path="/doctor/appointments" 
             element={
-              <ProtectedRoute requiredRole={['doctor']}>
-                <div className="p-8">Citas del Doctor</div>
+              <ProtectedRoute requiredRole={['doctor', 'admin']}>
+                <AppointmentList />
               </ProtectedRoute>
             } 
           />
@@ -182,7 +214,25 @@ const AppRoutes: React.FC = () => {
             path="/client/appointments" 
             element={
               <ProtectedRoute requiredRole={['client']}>
-                <div className="p-8">Mis Citas</div>
+                <MyAppointmentsPage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/client/profile" 
+            element={
+              <ProtectedRoute requiredRole={['client']}>
+                <ProfilePage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/client/medical-history" 
+            element={
+              <ProtectedRoute requiredRole={['client']}>
+                <MedicalHistoryPage />
               </ProtectedRoute>
             } 
           />
@@ -221,12 +271,24 @@ const AppRoutes: React.FC = () => {
                     <div className="bg-white rounded-lg shadow-md p-6">
                       <ReactQueryTest />
                     </div>
+                    
+                    <div className="bg-white rounded-lg shadow-md p-6">
+                      <AppointmentServiceTest />
+                    </div>
                   </div>
                 </div>
               </div>
             } 
           />
           <Route path="/dev/roles" element={<RoleTestComponent />} />
+              <Route path="/dev/appointment-service" element={<AppointmentServiceTest />} />
+              <Route path="/dev/appointments" element={<AppointmentList />} />
+              <Route path="/dev/appointment-components" element={<AppointmentComponents />} />
+              <Route path="/dev/doctors" element={<DoctorList />} />
+              <Route path="/dev/doctors/:id" element={<DoctorProfile />} />
+          
+          {/* 🧪 RUTA TEMPORAL - Doctor Dashboard sin autenticación para desarrollo */}
+          <Route path="/dev/doctor-dashboard" element={<DoctorDashboard />} />
           
           {/* 🔄 RUTA DE REDIRECCIÓN - Para rutas no encontradas */}
           <Route 
