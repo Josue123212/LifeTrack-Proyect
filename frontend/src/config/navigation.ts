@@ -88,12 +88,6 @@ export const navigationConfig: NavigationConfig = {
       description: 'Panel de control administrativo'
     },
     {
-      name: 'Citas',
-      href: '/admin/appointments',
-      icon: 'event',
-      description: 'Gestión de todas las citas'
-    },
-    {
       name: 'Pacientes',
       href: '/admin/patients',
       icon: 'people',
@@ -202,6 +196,34 @@ export const navigationConfig: NavigationConfig = {
       href: '/receptionist/checkin',
       icon: 'how_to_reg',
       description: 'Registro de llegada de pacientes'
+    }
+  ],
+
+  // 👩‍💼 Secretaria - Gestión administrativa y coordinación
+  secretary: [
+    {
+      name: 'Dashboard',
+      href: '/secretary/dashboard',
+      icon: 'dashboard',
+      description: 'Panel de gestión administrativa'
+    },
+    {
+      name: 'Citas',
+      href: '/secretary/appointments',
+      icon: 'event_note',
+      description: 'Gestión de citas médicas'
+    },
+    {
+      name: 'Pacientes',
+      href: '/secretary/patients',
+      icon: 'people',
+      description: 'Registro y gestión de pacientes'
+    },
+    {
+      name: 'Calendario',
+      href: '/secretary/calendar',
+      icon: 'calendar_month',
+      description: 'Vista de calendario general'
     }
   ]
 };

@@ -17,6 +17,12 @@ class Patient(models.Model):
         ('O', 'Otro'),
     ]
     
+    STATUS_CHOICES = [
+        ('active', 'Activo'),
+        ('inactive', 'Inactivo'),
+        ('disabled', 'Inhabilitado'),
+    ]
+    
     # Relación con el usuario
     user = models.OneToOneField(
         User,
@@ -57,6 +63,15 @@ class Patient(models.Model):
         verbose_name='Dirección',
         null=True,
         blank=True
+    )
+    
+    # Campo de estado del paciente
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='active',
+        verbose_name="Estado",
+        help_text="Estado actual del paciente en el sistema"
     )
     
     # Información médica
@@ -136,6 +151,9 @@ class Patient(models.Model):
     @property
     def age(self):
         """Calcula la edad del paciente basada en su fecha de nacimiento"""
+        if not self.date_of_birth:
+            return None
+        
         from datetime import date
         today = date.today()
         return today.year - self.date_of_birth.year - (
@@ -151,3 +169,67 @@ class Patient(models.Model):
             'medications': self.medications or 'Ninguna'
         }
         return summary
+    
+    def set_status(self, new_status):
+        """Establece el estado del paciente."""
+        if new_status in dict(self.STATUS_CHOICES):
+            self.status = new_status
+            
+            # Desactivar/activar usuario según el estado
+            if new_status == 'disabled':
+                # Si está inhabilitado, desactivar la cuenta del usuario
+                self.user.is_active = False
+                self.user.save(update_fields=['is_active'])
+            elif new_status == 'active':
+                # Si está activo, activar la cuenta del usuario
+                self.user.is_active = True
+                self.user.save(update_fields=['is_active'])
+            # Para 'inactive', mantener el usuario activo pero el paciente no disponible
+            
+            self.save(update_fields=['status', 'updated_at'])
+            return True
+        return False
+    
+    def disable_patient(self):
+        """Inhabilita al paciente."""
+        return self.set_status('disabled')
+    
+    def activate_patient(self):
+        """Activa al paciente."""
+        return self.set_status('active')
+    
+    def deactivate_patient(self):
+        """Desactiva temporalmente al paciente."""
+        return self.set_status('inactive')
+    
+    @property
+    def is_active(self):
+        """Verifica si el paciente está activo."""
+        return self.status == 'active'
+    
+    @property
+    def is_disabled(self):
+        """Verifica si el paciente está inhabilitado."""
+        return self.status == 'disabled'
+    
+    @property
+    def status_display(self):
+        """Retorna el texto legible del estado."""
+        return dict(self.STATUS_CHOICES).get(self.status, 'Desconocido')
+    
+    @property
+    def can_access_system(self):
+        """Verifica si el paciente puede acceder al sistema."""
+        return self.status != 'disabled' and self.user.is_active
+    
+    @property
+    def status_color(self):
+        """Retorna el color asociado al estado para el frontend."""
+        if self.status == 'disabled':
+            return '#ef4444'  # Rojo - Inhabilitado
+        elif self.status == 'inactive':
+            return '#f59e0b'  # Amarillo - Inactivo
+        elif self.status == 'active':
+            return '#10b981'  # Verde - Activo
+        else:
+            return '#6b7280'  # Gris por defecto

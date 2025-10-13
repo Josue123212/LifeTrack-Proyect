@@ -1,7 +1,9 @@
 from rest_framework import serializers
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from .models import Doctor
 from decimal import Decimal
+
+User = get_user_model()
 
 
 class DoctorSerializer(serializers.ModelSerializer):
@@ -16,6 +18,14 @@ class DoctorSerializer(serializers.ModelSerializer):
     
     # Campos calculados
     full_name = serializers.CharField(read_only=True)
+    
+    # Campos de estado
+    status_display = serializers.CharField(read_only=True)
+    status_color = serializers.CharField(read_only=True)
+    status_badge_text = serializers.CharField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
+    is_disabled = serializers.BooleanField(read_only=True)
+    can_access_system = serializers.BooleanField(read_only=True)
     
     # Serializer anidado para citas
     appointments = serializers.SerializerMethodField()
@@ -35,7 +45,14 @@ class DoctorSerializer(serializers.ModelSerializer):
             'years_experience',
             'consultation_fee',
             'bio',
+            'status',
+            'status_display',
+            'status_color',
+            'status_badge_text',
             'is_available',
+            'is_active',
+            'is_disabled',
+            'can_access_system',
             'appointments',
             'appointments_count',
             'created_at',
@@ -62,7 +79,180 @@ class DoctorSerializer(serializers.ModelSerializer):
                 "Ya existe un doctor con este número de licencia."
             )
         
+        return value
+
+    def get_appointments(self, obj):
+        """Retorna las próximas citas del doctor (próximas 10 citas)"""
+        try:
+            from apps.appointments.serializers import AppointmentListSerializer
+            from django.utils import timezone
+            
+            appointments = obj.appointments.filter(
+                status__in=['scheduled', 'confirmed'],
+                date__gte=timezone.now().date()
+            ).order_by('date', 'time')[:10]
+            return AppointmentListSerializer(appointments, many=True).data
+        except:
+            # Si hay algún error con las citas, retornar lista vacía
+            return []
+    
+    def get_appointments_count(self, obj):
+        """Retorna el conteo de citas por estado"""
+        try:
+            from django.utils import timezone
+            
+            return {
+                'total': obj.appointments.count(),
+                'scheduled': obj.appointments.filter(status='scheduled').count(),
+                'confirmed': obj.appointments.filter(status='confirmed').count(),
+                'upcoming': obj.appointments.filter(
+                    status__in=['scheduled', 'confirmed'],
+                    date__gte=timezone.now().date()
+                ).count(),
+                'completed_this_month': obj.appointments.filter(
+                    status='completed',
+                    date__year=timezone.now().year,
+                    date__month=timezone.now().month
+                ).count()
+            }
+        except:
+            # Si hay algún error, retornar conteos en cero
+            return {
+                'total': 0,
+                'scheduled': 0,
+                'confirmed': 0,
+                'upcoming': 0,
+                'completed_this_month': 0
+            }
+
+
+class DoctorCreateWithUserSerializer(serializers.ModelSerializer):
+    """
+    Serializer para crear nuevos doctores junto con su usuario.
+    Maneja la creación completa de usuario y doctor en una sola operación.
+    """
+    # Campos del usuario
+    username = serializers.CharField(write_only=True)
+    email = serializers.EmailField(write_only=True)
+    first_name = serializers.CharField(write_only=True)
+    last_name = serializers.CharField(write_only=True)
+    phone = serializers.CharField(write_only=True, required=False)
+    password = serializers.CharField(write_only=True)
+    
+    # Campos opcionales de horario
+    work_start_time = serializers.TimeField(required=False, allow_null=True)
+    work_end_time = serializers.TimeField(required=False, allow_null=True)
+    work_days = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        allow_empty=True
+    )
+    
+    class Meta:
+        model = Doctor
+        fields = [
+            # Campos del usuario
+            'username', 'email', 'first_name', 'last_name', 'phone', 'password',
+            # Campos del doctor
+            'medical_license', 'specialization', 'years_experience', 
+            'consultation_fee', 'bio', 'is_available',
+            # Campos de horario
+            'work_start_time', 'work_end_time', 'work_days'
+        ]
+
+    def validate_username(self, value):
+        """Valida que el username sea único."""
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError(
+                "Ya existe un usuario con este nombre de usuario."
+            )
+        return value
+
+    def validate_email(self, value):
+        """Valida que el email sea único."""
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError(
+                "Ya existe un usuario con este email."
+            )
+        return value
+
+    def validate_medical_license(self, value):
+        """Valida que el número de licencia sea único y tenga formato válido."""
+        if not value or len(value.strip()) < 5:
+            raise serializers.ValidationError(
+                "El número de licencia debe tener al menos 5 caracteres."
+            )
+        
+        if Doctor.objects.filter(medical_license=value.strip().upper()).exists():
+            raise serializers.ValidationError(
+                "Ya existe un doctor con este número de licencia."
+            )
+        
         return value.strip().upper()
+
+    def validate_consultation_fee(self, value):
+        """Valida que la tarifa de consulta sea un valor positivo razonable."""
+        if value < Decimal('0.00'):
+            raise serializers.ValidationError(
+                "La tarifa de consulta no puede ser negativa."
+            )
+        
+        if value > Decimal('10000.00'):
+            raise serializers.ValidationError(
+                "La tarifa de consulta parece excesivamente alta."
+            )
+        
+        return value
+
+    def validate_years_experience(self, value):
+        """Valida que los años de experiencia sean un valor positivo."""
+        if value < 0:
+            raise serializers.ValidationError(
+                "Los años de experiencia no pueden ser negativos."
+            )
+        if value > 70:
+            raise serializers.ValidationError(
+                "Los años de experiencia no pueden ser mayores a 70."
+            )
+        return value
+
+    def create(self, validated_data):
+        """
+        Crea un nuevo usuario y su perfil de doctor asociado.
+        """
+        # Extraer datos del usuario
+        user_data = {
+            'username': validated_data.pop('username'),
+            'email': validated_data.pop('email'),
+            'first_name': validated_data.pop('first_name'),
+            'last_name': validated_data.pop('last_name'),
+            'password': validated_data.pop('password'),
+        }
+        
+        # Extraer teléfono si existe
+        phone = validated_data.pop('phone', None)
+        
+        # Crear el usuario
+        user = User.objects.create_user(**user_data)
+        
+        # Asignar rol de doctor
+        user.groups.clear()
+        from django.contrib.auth.models import Group
+        doctor_group, created = Group.objects.get_or_create(name='doctor')
+        user.groups.add(doctor_group)
+        
+        # Actualizar teléfono del usuario si se proporciona
+        if phone:
+            user.phone = phone
+            user.save()
+        
+        # Crear el doctor
+        doctor = Doctor.objects.create(
+            user=user,
+            **validated_data
+        )
+        
+        return doctor
 
     def validate_consultation_fee(self, value):
         """
@@ -94,35 +284,7 @@ class DoctorSerializer(serializers.ModelSerializer):
             )
         return value
 
-    def get_appointments(self, obj):
-        """Retorna las próximas citas del doctor (próximas 10 citas)"""
-        from apps.appointments.serializers import AppointmentListSerializer
-        from django.utils import timezone
-        
-        appointments = obj.appointments.filter(
-            status__in=['scheduled', 'confirmed'],
-            date__gte=timezone.now().date()
-        ).order_by('date', 'time')[:10]
-        return AppointmentListSerializer(appointments, many=True).data
-    
-    def get_appointments_count(self, obj):
-        """Retorna el conteo de citas por estado"""
-        from django.utils import timezone
-        
-        return {
-            'total': obj.appointments.count(),
-            'scheduled': obj.appointments.filter(status='scheduled').count(),
-            'confirmed': obj.appointments.filter(status='confirmed').count(),
-            'upcoming': obj.appointments.filter(
-                status__in=['scheduled', 'confirmed'],
-                date__gte=timezone.now().date()
-            ).count(),
-            'completed_this_month': obj.appointments.filter(
-                status='completed',
-                date__year=timezone.now().year,
-                date__month=timezone.now().month
-            ).count()
-        }
+
 
 
 class DoctorCreateSerializer(serializers.ModelSerializer):
@@ -190,7 +352,8 @@ class DoctorUpdateSerializer(serializers.ModelSerializer):
             'years_experience',
             'consultation_fee',
             'bio',
-            'is_available'
+            'is_available',
+            'status'  # Permitir actualización del estado del doctor
         ]
         # license_number y user no se pueden modificar después de la creación
 
@@ -203,6 +366,11 @@ class DoctorListSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
     
+    # Campos de estado para badges
+    status_display = serializers.CharField(read_only=True)
+    status_color = serializers.CharField(read_only=True)
+    status_badge_text = serializers.CharField(read_only=True)
+    
     class Meta:
         model = Doctor
         fields = [
@@ -212,7 +380,14 @@ class DoctorListSerializer(serializers.ModelSerializer):
             'specialization',
             'years_experience',
             'consultation_fee',
-            'is_available'
+            'status',
+            'status_display',
+            'status_color',
+            'status_badge_text',
+            'is_available',
+            'work_start_time',
+            'work_end_time',
+            'work_days'
         ]
 
 
@@ -263,6 +438,7 @@ class DoctorProfileSerializer(serializers.ModelSerializer):
             'years_experience',
             'consultation_fee',
             'bio',
+            'status',
             'is_available',
             'work_start_time',
             'work_end_time',

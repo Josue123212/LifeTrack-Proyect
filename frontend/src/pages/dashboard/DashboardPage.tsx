@@ -53,49 +53,33 @@ export const DashboardPage: React.FC = () => {
   }
 
   // 🎯 Enrutamiento por rol
-  const renderDashboardByRole = () => {
-    switch (user?.role) {
-      case 'admin':
-      case 'superadmin':
-        return <AdminDashboard />;
-      case 'doctor':
-        return <DoctorDashboard />;
-      case 'secretary':
-        return (
-          <Layout>
-            <div className="space-y-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h2 className="text-blue-800 font-semibold text-lg mb-2">
-                  Dashboard de Secretaria
-                </h2>
-                <p className="text-blue-600">
-                  Panel de control para gestión de citas y pacientes.
-                </p>
-              </div>
+  switch (user.role) {
+    case 'doctor':
+      return <DoctorDashboard />;
+    case 'secretary':
+      return <SecretaryDashboard />;
+    case 'admin':
+      return <AdminDashboard />;
+    case 'superadmin':
+      return <SuperAdminDashboard />;
+    case 'client':
+      return <ClientDashboard />;
+    default:
+      return (
+        <Layout>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold text-text-primary mb-2">
+                Dashboard no disponible
+              </h2>
+              <p className="text-text-secondary">
+                No se encontró un dashboard para tu rol.
+              </p>
             </div>
-          </Layout>
-        );
-      case 'client':
-        return <ClientDashboard />;
-      default:
-        return (
-          <Layout>
-            <div className="space-y-6">
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                <h2 className="text-gray-800 font-semibold text-lg mb-2">
-                  Dashboard no disponible
-                </h2>
-                <p className="text-gray-600">
-                  No se encontró un dashboard para tu rol.
-                </p>
-              </div>
-            </div>
-          </Layout>
-        );
-    }
-  };
-
-  return renderDashboardByRole();
+          </div>
+        </Layout>
+      );
+  }
 };
 
 // 📋 DOCUMENTACIÓN DEL COMPONENTE:

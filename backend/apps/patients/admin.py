@@ -64,5 +64,7 @@ class PatientAdmin(admin.ModelAdmin):
     
     def age(self, obj):
         """Muestra la edad del paciente"""
+        if obj.age is None:
+            return "No especificada"
         return f"{obj.age} años"
     age.short_description = 'Edad'

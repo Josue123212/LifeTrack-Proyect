@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { toast } from 'react-hot-toast';
 import { authService, tokenUtils } from '../services/authService';
 import type { User, LoginData, RegisterData, UpdateProfileData, ChangePasswordData } from '../types/auth';
@@ -16,6 +17,7 @@ interface AuthContextType extends AuthState {
   register: (registerData: RegisterData) => Promise<void>;
   logout: () => void;
   updateProfile: (data: UpdateProfileData) => Promise<void>;
+  updateUser: (user: User) => void;
   changePassword: (data: ChangePasswordData) => Promise<void>;
   clearError: () => void;
   refreshUserProfile: () => Promise<void>;
@@ -30,13 +32,38 @@ type AuthAction =
   | { type: 'UPDATE_USER'; payload: User }
   | { type: 'CLEAR_ERROR' };
 
-// Estado inicial
-const initialState: AuthState = {
-  user: null,
-  isAuthenticated: false,
-  isLoading: false,
-  error: null,
+// Función para obtener el estado inicial inteligente
+const getInitialState = (): AuthState => {
+  const cachedUser = localStorage.getItem('user');
+  const accessToken = tokenUtils.getAccessToken();
+  const refreshToken = tokenUtils.getRefreshToken();
+  
+  // Si hay usuario en caché Y tokens, asumir que está autenticado inicialmente
+  if (cachedUser && accessToken && refreshToken) {
+    try {
+      const user = JSON.parse(cachedUser);
+      return {
+        user,
+        isAuthenticated: true,
+        isLoading: false, // No mostrar cargando si hay datos en caché
+        error: null,
+      };
+    } catch (error) {
+      console.warn('Error al parsear usuario del caché:', error);
+    }
+  }
+  
+  // SIEMPRE empezar sin cargando para evitar bloqueos
+  return {
+    user: null,
+    isAuthenticated: false,
+    isLoading: false, // Cambiar a false para evitar bloqueo inicial
+    error: null,
+  };
 };
+
+// Estado inicial
+const initialState: AuthState = getInitialState();
 
 // Reducer
 const authReducer = (state: AuthState, action: AuthAction): AuthState => {
@@ -97,49 +124,180 @@ interface AuthProviderProps {
 // Provider del contexto
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
+  const initializingRef = useRef(false);
+
+  // Función para limpiar datos de autenticación
+  const clearAuthData = useCallback(() => {
+    tokenUtils.clearTokens();
+    localStorage.removeItem('user');
+    dispatch({ type: 'LOGOUT' });
+    console.log('🧹 Datos de autenticación limpiados');
+  }, []);
+
+  // Función para intentar renovar token
+  const attemptTokenRefresh = useCallback(async (refreshToken: string) => {
+    try {
+      console.log('🔄 Intentando renovar token...');
+      
+      // Timeout más corto para el refresh
+      const refreshPromise = authService.refreshToken(refreshToken);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Refresh timeout')), 400)
+      );
+      
+      const authResponse = await Promise.race([refreshPromise, timeoutPromise]) as any;
+      
+      tokenUtils.saveTokens(authResponse.accessToken, authResponse.refreshToken);
+      localStorage.setItem('user', JSON.stringify(authResponse.user));
+      dispatch({ type: 'AUTH_SUCCESS', payload: authResponse.user });
+      console.log('✅ Token renovado exitosamente');
+    } catch (refreshError) {
+      console.error('❌ Error al renovar token:', refreshError);
+      clearAuthData();
+      throw refreshError; // Re-lanzar para que el caller pueda manejarlo
+    }
+  }, [clearAuthData]);
 
   // Inicializar autenticación
   useEffect(() => {
+    let isMounted = true;
+    let timeoutId: NodeJS.Timeout;
+
     const initializeAuth = async () => {
       try {
+        // Evitar múltiples inicializaciones simultáneas
+        if (initializingRef.current) return;
+        
+        initializingRef.current = true;
+        
         const accessToken = tokenUtils.getAccessToken();
         const refreshToken = tokenUtils.getRefreshToken();
         
-        if (accessToken && refreshToken) {
-          const isValid = await authService.verifyToken(accessToken);
+        // Si no hay tokens, limpiar inmediatamente sin mostrar cargando
+        if (!accessToken || !refreshToken) {
+          console.log('❌ No hay tokens guardados, limpiando estado...');
+          if (isMounted) {
+            clearAuthData();
+          }
+          return;
+        }
+        
+        // Solo mostrar cargando si no hay usuario en caché Y hay tokens válidos
+        const cachedUser = localStorage.getItem('user');
+        if (!cachedUser && accessToken && refreshToken) {
+          console.log('🔄 Mostrando loading para validar tokens...');
+          dispatch({ type: 'AUTH_START' });
+        }
+        
+        // ⏰ TIMEOUT DE SEGURIDAD - Si no se resuelve en 500ms, limpiar estado
+        timeoutId = setTimeout(() => {
+          if (isMounted) {
+            console.log('⏰ Timeout de autenticación - limpiando estado');
+            clearAuthData();
+          }
+        }, 500);
+        
+        // Primero verificar si hay usuario en localStorage
+        if (cachedUser) {
+          try {
+            JSON.parse(cachedUser); // Verificar que el JSON es válido
+            
+            // Si ya tenemos el usuario en caché, validar en background sin bloquear la UI
+            authService.getProfile()
+              .then((profileUser) => {
+                if (isMounted) {
+                  dispatch({ type: 'AUTH_SUCCESS', payload: profileUser });
+                  localStorage.setItem('user', JSON.stringify(profileUser));
+                }
+              })
+              .catch(() => {
+                attemptTokenRefresh(refreshToken).catch(() => {
+                  if (isMounted) {
+                    clearAuthData();
+                  }
+                });
+              });
+            
+            clearTimeout(timeoutId);
+            return; // Salir inmediatamente, la validación continúa en background
+          } catch (error) {
+            console.log('⚠️ Error al parsear caché, validando desde servidor...');
+          }
+        }
+        
+        // Si no hay caché válido, hacer validación completa
+        try {
+          console.log('🔍 Validando token desde servidor...');
+          const profileUser = await Promise.race([
+            authService.getProfile(),
+            new Promise<never>((_, reject) => 
+              setTimeout(() => reject(new Error('Timeout')), 400)
+            )
+          ]) as User;
           
-          if (isValid) {
-            const user = await authService.getProfile();
-            dispatch({ type: 'AUTH_SUCCESS', payload: user });
-          } else {
-            try {
-              const authResponse = await authService.refreshToken(refreshToken);
-              tokenUtils.saveTokens(authResponse.accessToken, authResponse.refreshToken);
-              localStorage.setItem('user', JSON.stringify(authResponse.user));
-              dispatch({ type: 'AUTH_SUCCESS', payload: authResponse.user });
-            } catch (refreshError) {
-              tokenUtils.clearTokens();
-              localStorage.removeItem('user');
-              dispatch({ type: 'LOGOUT' });
+          clearTimeout(timeoutId);
+          if (isMounted) {
+            dispatch({ type: 'AUTH_SUCCESS', payload: profileUser });
+            console.log('✅ Autenticación restaurada desde servidor');
+            localStorage.setItem('user', JSON.stringify(profileUser));
+          }
+        } catch (error) {
+          console.log('⚠️ Error al validar token, intentando refresh...');
+          try {
+            await attemptTokenRefresh(refreshToken);
+          } catch (refreshError: any) {
+            console.error('❌ Error en refresh:', refreshError);
+            
+            // Solo limpiar datos si es un error de autenticación (401, 403)
+            // No limpiar por errores de red o servidor (500, timeout, etc.)
+            const shouldClearAuth = refreshError?.response?.status === 401 || 
+                                   refreshError?.response?.status === 403 ||
+                                   refreshError?.message?.includes('Invalid refresh token');
+            
+            if (shouldClearAuth) {
+              console.log('🧹 Error de autenticación, limpiando datos');
+              clearTimeout(timeoutId);
+              if (isMounted) {
+                clearAuthData();
+              }
+            } else {
+              console.log('⚠️ Error temporal, manteniendo sesión');
+              // Mantener el usuario del localStorage si existe
+              const savedUser = localStorage.getItem('user');
+              if (savedUser && isMounted) {
+                try {
+                  const user = JSON.parse(savedUser);
+                  dispatch({ type: 'AUTH_SUCCESS', payload: user });
+                  console.log('✅ Sesión mantenida desde localStorage');
+                } catch (parseError) {
+                  console.error('Error al parsear usuario guardado:', parseError);
+                }
+              }
             }
           }
-        } else {
-          const savedUser = localStorage.getItem('user');
-          if (savedUser) {
-            localStorage.removeItem('user');
-          }
-          dispatch({ type: 'LOGOUT' });
         }
       } catch (error) {
-        console.error('Error al inicializar autenticación:', error);
-        tokenUtils.clearTokens();
-        localStorage.removeItem('user');
-        dispatch({ type: 'LOGOUT' });
+        console.error('❌ Error al inicializar autenticación:', error);
+        clearTimeout(timeoutId);
+        if (isMounted) {
+          clearAuthData();
+        }
+      } finally {
+        initializingRef.current = false;
       }
     };
 
     initializeAuth();
-  }, []);
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+      initializingRef.current = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [attemptTokenRefresh, clearAuthData]);
 
   // Función de login
   const login = async (loginData: LoginData): Promise<void> => {
@@ -155,7 +313,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       dispatch({ type: 'AUTH_SUCCESS', payload: authResponse.user });
       
-      toast.success(`¡Bienvenido/a, ${authResponse.user.firstName}!`);
+      toast.success(`¡Bienvenido/a, ${authResponse.user.firstName || 'Usuario'}!`);
     } catch (error: any) {
       console.error('❌ Error en login:', error);
       const errorMessage = error.message || 'Error al iniciar sesión';
@@ -180,7 +338,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       dispatch({ type: 'AUTH_SUCCESS', payload: authResponse.user });
       
       console.log('🎉 Usuario registrado y autenticado exitosamente');
-      toast.success(`¡Bienvenido/a, ${authResponse.user.firstName}! Tu cuenta ha sido creada exitosamente.`);
+      toast.success(`¡Bienvenido/a, ${authResponse.user.firstName || 'Usuario'}! Tu cuenta ha sido creada exitosamente.`);
     } catch (error: any) {
       console.error('❌ Error en AuthContext.register:', error);
       
@@ -255,8 +413,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(user));
       dispatch({ type: 'UPDATE_USER', payload: user });
     } catch (error: any) {
-      console.error('Error al refrescar perfil:', error);
+      console.error('❌ Error al refrescar perfil:', error);
     }
+  };
+
+  // Función para actualizar usuario (solo estado local)
+  const updateUser = (user: User): void => {
+    localStorage.setItem('user', JSON.stringify(user));
+    dispatch({ type: 'UPDATE_USER', payload: user });
   };
 
   // Valor del contexto
@@ -269,6 +433,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     updateProfile,
+    updateUser,
     changePassword,
     clearError,
     refreshUserProfile
@@ -319,4 +484,5 @@ export const usePermissions = () => {
   };
 };
 
-export { AuthContext };
+// Exportación por defecto del contexto
+export default AuthContext;

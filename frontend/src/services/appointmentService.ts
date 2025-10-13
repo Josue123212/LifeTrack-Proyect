@@ -104,8 +104,26 @@ export const appointmentService = {
    * POST /api/appointments/{id}/cancel/
    */
   cancelAppointment: async (appointmentId: number, reason?: string): Promise<AppointmentActionResponse> => {
-    const data = reason ? { reason } : {};
-    return apiHelpers.post<AppointmentActionResponse>(`/appointments/${appointmentId}/cancel/`, data);
+    try {
+      const data = reason ? { reason } : {};
+      return await apiHelpers.post<AppointmentActionResponse>(`/appointments/${appointmentId}/cancel/`, data);
+    } catch (error: any) {
+      // Enriquecer el error con información adicional para mejor debugging
+      if (error?.response) {
+        const { status, data } = error.response;
+        console.error(`Error ${status} al cancelar cita ${appointmentId}:`, data);
+        
+        // Agregar contexto específico al error
+        if (status === 403) {
+          error.userMessage = 'No tienes permisos para cancelar esta cita';
+        } else if (status === 404) {
+          error.userMessage = 'La cita no fue encontrada';
+        } else if (status === 400) {
+          error.userMessage = data?.detail || 'La cita no puede ser cancelada en su estado actual';
+        }
+      }
+      throw error;
+    }
   },
 
   /**
@@ -149,7 +167,9 @@ export const appointmentService = {
       });
     }
 
-    return apiHelpers.get<PatientAppointmentHistory>(`/appointments/patient-history/?${params.toString()}`);
+    const response = await apiHelpers.get<PatientAppointmentHistory>(`/appointments/patient-history/?${params.toString()}`);
+    
+    return response;
   },
 
   /**
@@ -167,7 +187,7 @@ export const appointmentService = {
 
   /**
    * Obtener horarios disponibles para agendar
-   * GET /api/appointments/available_slots/?doctor_id={id}&date={date}
+   * GET /api/appointments/available-slots/?doctor_id={id}&date={date}
    */
   getAvailableSlots: async (doctorId: number, date: string): Promise<AvailableSlotsResponse> => {
     const params = new URLSearchParams({
@@ -175,7 +195,7 @@ export const appointmentService = {
       date: date
     });
 
-    return apiHelpers.get<AvailableSlotsResponse>(`/appointments/available_slots/?${params.toString()}`);
+    return apiHelpers.get<AvailableSlotsResponse>(`/appointments/available-slots/?${params.toString()}`);
   },
 
   // ==========================================
@@ -269,7 +289,7 @@ export const appointmentService = {
   validateAvailability: async (doctorId: number, date: string, time: string): Promise<boolean> => {
     try {
       const slots = await appointmentService.getAvailableSlots(doctorId, date);
-      return slots.available_slots.includes(time);
+      return slots.data.available_slots.some(slot => slot.time === time);
     } catch (error) {
       console.error('Error validating availability:', error);
       return false;
@@ -289,10 +309,10 @@ export const appointmentService = {
         const dateStr = d.toISOString().split('T')[0];
         const slots = await appointmentService.getAvailableSlots(doctorId, dateStr);
         
-        if (slots.available_slots.length > 0) {
+        if (slots.data.available_slots.length > 0) {
           return {
             date: dateStr,
-            time: slots.available_slots[0]
+            time: slots.data.available_slots[0].time
           };
         }
       }

@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authService } from '../../services/authService';
-import { dashboardService } from '../../services/dashboardService';
 import type { User, UpdateProfileData } from '../../types/auth';
 
 // 🎨 Componentes UI
@@ -34,7 +33,6 @@ import {
  * Permite al cliente ver y editar su información personal:
  * - Datos básicos (nombre, email, teléfono)
  * - Información médica (alergias, condiciones)
- * - Estadísticas de citas
  */
 const ProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
@@ -46,13 +44,6 @@ const ProfilePage: React.FC = () => {
     queryKey: ['user-profile'],
     queryFn: authService.getProfile,
     staleTime: 5 * 60 * 1000, // 5 minutos
-  });
-
-  // 📊 Consulta de estadísticas del dashboard
-  const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
-    queryKey: ['client-dashboard'],
-    queryFn: dashboardService.getClientDashboard,
-    staleTime: 5 * 60 * 1000,
   });
 
   // 🔄 Mutación para actualizar perfil
@@ -114,9 +105,9 @@ const ProfilePage: React.FC = () => {
       <Layout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Error al cargar perfil</h2>
-            <p className="text-gray-600">No se pudo cargar la información del perfil.</p>
+            <AlertTriangle className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--error)' }} />
+            <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Error al cargar perfil</h2>
+            <p style={{ color: 'var(--text-secondary)' }}>No se pudo cargar la información del perfil.</p>
           </div>
         </div>
       </Layout>
@@ -129,8 +120,8 @@ const ProfilePage: React.FC = () => {
       {/* 📋 Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Mi Perfil</h1>
-          <p className="text-gray-600">Gestiona tu información personal y médica</p>
+          <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Mi Perfil</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>Gestiona tu información personal y médica</p>
         </div>
         
         {!isEditing ? (
@@ -177,7 +168,7 @@ const ProfilePage: React.FC = () => {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
                     Nombre
                   </label>
                   {isEditing ? (
@@ -187,12 +178,12 @@ const ProfilePage: React.FC = () => {
                       placeholder="Nombre"
                     />
                   ) : (
-                    <p className="text-gray-900">{user.firstName}</p>
+                    <p style={{ color: 'var(--text-primary)' }}>{user?.firstName || 'No especificado'}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
                     Apellido
                   </label>
                   {isEditing ? (
@@ -202,21 +193,21 @@ const ProfilePage: React.FC = () => {
                       placeholder="Apellido"
                     />
                   ) : (
-                    <p className="text-gray-900">{user.lastName}</p>
+                    <p style={{ color: 'var(--text-primary)' }}>{user.lastName}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                  <label className="block text-sm font-medium mb-1 flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
                     <Mail className="h-4 w-4" />
                     Email
                   </label>
-                  <p className="text-gray-900">{user.email}</p>
-                  <p className="text-xs text-gray-500">El email no se puede modificar</p>
+                  <p style={{ color: 'var(--text-primary)' }}>{user.email}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>El email no se puede modificar</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                  <label className="block text-sm font-medium mb-1 flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
                     <Phone className="h-4 w-4" />
                     Teléfono
                   </label>
@@ -227,12 +218,12 @@ const ProfilePage: React.FC = () => {
                       placeholder="Teléfono"
                     />
                   ) : (
-                    <p className="text-gray-900">{user.phone || 'No especificado'}</p>
+                    <p style={{ color: 'var(--text-primary)' }}>{user.phone || 'No especificado'}</p>
                   )}
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                  <label className="block text-sm font-medium mb-1 flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
                     <MapPin className="h-4 w-4" />
                     Dirección
                   </label>
@@ -243,12 +234,12 @@ const ProfilePage: React.FC = () => {
                       placeholder="Dirección completa"
                     />
                   ) : (
-                    <p className="text-gray-900">{user.address || 'No especificada'}</p>
+                    <p style={{ color: 'var(--text-primary)' }}>{user.address || 'No especificada'}</p>
                   )}
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
                     Contacto de Emergencia
                   </label>
                   {isEditing ? (
@@ -258,7 +249,7 @@ const ProfilePage: React.FC = () => {
                       placeholder="Nombre y teléfono del contacto de emergencia"
                     />
                   ) : (
-                    <p className="text-gray-900">{user.emergencyContact || 'No especificado'}</p>
+                    <p style={{ color: 'var(--text-primary)' }}>{user.emergencyContact || 'No especificado'}</p>
                   )}
                 </div>
               </div>
@@ -275,36 +266,48 @@ const ProfilePage: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
                   Alergias
                 </label>
                 {isEditing ? (
                   <textarea
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2"
+                    style={{ 
+                      border: '1px solid var(--border)', 
+                      backgroundColor: 'var(--surface)',
+                      color: 'var(--text-primary)',
+                      focusRingColor: 'var(--primary)'
+                    }}
                     rows={3}
                     value={editForm.allergies || ''}
                     onChange={(e) => handleInputChange('allergies', e.target.value)}
                     placeholder="Describe cualquier alergia conocida..."
                   />
                 ) : (
-                  <p className="text-gray-900">{user.allergies || 'Ninguna alergia registrada'}</p>
+                  <p style={{ color: 'var(--text-primary)' }}>{user.allergies || 'Ninguna alergia registrada'}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
                   Condiciones Médicas
                 </label>
                 {isEditing ? (
                   <textarea
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2"
+                    style={{ 
+                      border: '1px solid var(--border)', 
+                      backgroundColor: 'var(--surface)',
+                      color: 'var(--text-primary)',
+                      focusRingColor: 'var(--primary)'
+                    }}
                     rows={3}
                     value={editForm.medicalConditions || ''}
                     onChange={(e) => handleInputChange('medicalConditions', e.target.value)}
                     placeholder="Describe condiciones médicas relevantes..."
                   />
                 ) : (
-                  <p className="text-gray-900">{user.medicalConditions || 'Ninguna condición registrada'}</p>
+                  <p style={{ color: 'var(--text-primary)' }}>{user.medicalConditions || 'Ninguna condición registrada'}</p>
                 )}
               </div>
             </CardContent>
@@ -321,21 +324,21 @@ const ProfilePage: React.FC = () => {
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Rol:</span>
+                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Rol:</span>
                   <Badge variant="secondary">{user.role}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Estado:</span>
+                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Estado:</span>
                   <Badge variant={user.isActive ? "default" : "destructive"}>
                     {user.isActive ? 'Activo' : 'Inactivo'}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 flex items-center gap-1">
+                  <span className="text-sm flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
                     <Calendar className="h-4 w-4" />
                     Miembro desde:
                   </span>
-                  <span className="text-sm text-gray-900">
+                  <span className="text-sm" style={{ color: 'var(--text-primary)' }}>
                     {new Date(user.dateJoined).toLocaleDateString('es-ES')}
                   </span>
                 </div>
@@ -343,36 +346,7 @@ const ProfilePage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* 📈 Estadísticas de Citas */}
-          {dashboardData && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Mis Estadísticas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Total de citas:</span>
-                    <span className="text-lg font-semibold text-blue-600">
-                      {dashboardData.totalAppointments || 0}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Próximas citas:</span>
-                    <span className="text-lg font-semibold text-green-600">
-                      {dashboardData.upcomingAppointments || 0}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Citas completadas:</span>
-                    <span className="text-lg font-semibold text-gray-600">
-                      {dashboardData.completedAppointments || 0}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+
         </div>
       </div>
       </div>

@@ -16,7 +16,10 @@ import type {
   PatientFilters,
   SecretaryAppointmentsResponse,
   SecretaryPatientsResponse,
-  SecretaryActivityReport
+  SecretaryActivityReport,
+  SecretaryListItem,
+  SecretariesResponse,
+  SecretaryFilters
 } from '../types/secretary';
 
 /**
@@ -29,26 +32,75 @@ export const secretaryService = {
 
   /**
    * Obtener perfil de la secretaria autenticada
-   * GET /api/secretaries/me/
+   * GET /api/users/secretaries/me/
    */
   getMyProfile: async (): Promise<SecretaryProfile> => {
-    return apiHelpers.get<SecretaryProfile>('/secretaries/me/');
+    return apiHelpers.get<SecretaryProfile>('/users/secretaries/me/');
   },
 
   /**
    * Actualizar perfil de la secretaria autenticada
-   * PUT /api/secretaries/me/
+   * PUT /api/users/secretaries/me/
    */
   updateMyProfile: async (profileData: SecretaryProfileData): Promise<SecretaryProfile> => {
-    return apiHelpers.put<SecretaryProfile>('/secretaries/me/', profileData);
+    return apiHelpers.put<SecretaryProfile>('/users/secretaries/me/', profileData);
   },
 
   /**
    * Obtener estadísticas del dashboard de secretaria
-   * GET /api/secretaries/dashboard/
+   * GET /api/users/secretaries/dashboard/
    */
   getDashboardStats: async (): Promise<SecretaryStats> => {
-    return apiHelpers.get<SecretaryStats>('/secretaries/dashboard/');
+    return apiHelpers.get<SecretaryStats>('/users/secretaries/dashboard/');
+  },
+
+  // ==========================================
+  // GESTIÓN DE SECRETARIAS (ADMIN)
+  // ==========================================
+
+  /**
+   * Obtener lista de todas las secretarias (solo para administradores)
+   * GET /api/users/secretaries/
+   */
+  getSecretaries: async (filters?: SecretaryFilters): Promise<SecretariesResponse> => {
+    const params = new URLSearchParams();
+    
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, value.toString());
+        }
+      });
+    }
+
+    const queryString = params.toString();
+    const url = queryString ? `/users/secretaries/?${queryString}` : '/users/secretaries/';
+    
+    return apiHelpers.get<SecretariesResponse>(url);
+  },
+
+  /**
+   * Obtener una secretaria específica por ID (solo para administradores)
+   * GET /api/users/secretaries/{id}/
+   */
+  getSecretaryById: async (secretaryId: number): Promise<SecretaryListItem> => {
+    return apiHelpers.get<SecretaryListItem>(`/users/secretaries/${secretaryId}/`);
+  },
+
+  /**
+   * Actualizar una secretaria específica (solo para administradores)
+   * PATCH /api/users/secretaries/{id}/
+   */
+  updateSecretary: async (secretaryId: number, data: Partial<SecretaryListItem>): Promise<SecretaryListItem> => {
+    return apiHelpers.patch<SecretaryListItem>(`/users/secretaries/${secretaryId}/`, data);
+  },
+
+  /**
+   * Crear nueva secretaria (solo para administradores)
+   * POST /api/users/secretaries/
+   */
+  createSecretary: async (data: any): Promise<SecretaryListItem> => {
+    return apiHelpers.post<SecretaryListItem>('/users/secretaries/', data);
   },
 
   // ==========================================
@@ -57,7 +109,7 @@ export const secretaryService = {
 
   /**
    * Obtener todas las citas (con filtros)
-   * GET /api/secretaries/appointments/
+   * GET /api/users/secretaries/appointments/
    */
   getAppointments: async (filters?: AppointmentFilters & { page?: number }): Promise<SecretaryAppointmentsResponse> => {
     const params = new URLSearchParams();
@@ -71,68 +123,74 @@ export const secretaryService = {
     }
 
     const queryString = params.toString();
-    const url = queryString ? `/secretaries/appointments/?${queryString}` : '/secretaries/appointments/';
+    const url = queryString ? `/users/secretaries/appointments/?${queryString}` : '/users/secretaries/appointments/';
     
     return apiHelpers.get<SecretaryAppointmentsResponse>(url);
   },
 
+  // NOTA: Los siguientes endpoints no están implementados en el backend actual
+  // TODO: Implementar en el backend si son necesarios
+
   /**
    * Obtener una cita específica
-   * GET /api/secretaries/appointments/{id}/
+   * GET /api/appointments/{id}/ (usar endpoint general de citas)
    */
   getAppointment: async (appointmentId: number): Promise<SecretaryAppointment> => {
-    return apiHelpers.get<SecretaryAppointment>(`/secretaries/appointments/${appointmentId}/`);
+    return apiHelpers.get<SecretaryAppointment>(`/appointments/${appointmentId}/`);
   },
 
   /**
    * Crear nueva cita para un paciente
-   * POST /api/secretaries/appointments/
+   * POST /api/users/secretaries/appointments/
    */
   createAppointment: async (appointmentData: CreateAppointmentData): Promise<SecretaryAppointment> => {
-    return apiHelpers.post<SecretaryAppointment>('/secretaries/appointments/', appointmentData);
+    return apiHelpers.post<SecretaryAppointment>('/users/secretaries/appointments/', appointmentData);
   },
+
+  // NOTA: Los siguientes endpoints de gestión de citas no están implementados
+  // TODO: Implementar en el backend si son necesarios
 
   /**
    * Actualizar una cita existente
-   * PATCH /api/secretaries/appointments/{id}/
+   * PATCH /api/appointments/{id}/ (usar endpoint general de citas)
    */
   updateAppointment: async (
     appointmentId: number,
     updateData: UpdateSecretaryAppointmentData
   ): Promise<SecretaryAppointment> => {
     return apiHelpers.patch<SecretaryAppointment>(
-      `/secretaries/appointments/${appointmentId}/`,
+      `/appointments/${appointmentId}/`,
       updateData
     );
   },
 
   /**
    * Cancelar una cita
-   * POST /api/secretaries/appointments/{id}/cancel/
+   * POST /api/appointments/{id}/cancel/ (usar endpoint general de citas)
    */
   cancelAppointment: async (
     appointmentId: number,
     reason?: string
   ): Promise<SecretaryAppointment> => {
     return apiHelpers.post<SecretaryAppointment>(
-      `/secretaries/appointments/${appointmentId}/cancel/`,
+      `/appointments/${appointmentId}/cancel/`,
       { reason }
     );
   },
 
   /**
    * Confirmar una cita
-   * POST /api/secretaries/appointments/{id}/confirm/
+   * POST /api/appointments/{id}/confirm/ (usar endpoint general de citas)
    */
   confirmAppointment: async (appointmentId: number): Promise<SecretaryAppointment> => {
     return apiHelpers.post<SecretaryAppointment>(
-      `/secretaries/appointments/${appointmentId}/confirm/`
+      `/appointments/${appointmentId}/confirm/`
     );
   },
 
   /**
    * Reprogramar una cita
-   * POST /api/secretaries/appointments/{id}/reschedule/
+   * POST /api/appointments/{id}/reschedule/ (usar endpoint general de citas)
    */
   rescheduleAppointment: async (
     appointmentId: number,
@@ -142,7 +200,7 @@ export const secretaryService = {
     }
   ): Promise<SecretaryAppointment> => {
     return apiHelpers.post<SecretaryAppointment>(
-      `/secretaries/appointments/${appointmentId}/reschedule/`,
+      `/appointments/${appointmentId}/reschedule/`,
       newDateTime
     );
   },
@@ -150,233 +208,90 @@ export const secretaryService = {
   // ==========================================
   // GESTIÓN DE PACIENTES
   // ==========================================
+  
+  // NOTA: Los siguientes endpoints de pacientes no están implementados en el backend actual
+  // TODO: Implementar en el backend si son necesarios
+  // Se pueden usar los endpoints generales de pacientes: /api/patients/
 
-  /**
-   * Obtener lista de pacientes
-   * GET /api/secretaries/patients/
-   */
+  /*
   getPatients: async (filters?: PatientFilters & { page?: number }): Promise<SecretaryPatientsResponse> => {
-    const params = new URLSearchParams();
-    
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          params.append(key, value.toString());
-        }
-      });
-    }
-
-    const queryString = params.toString();
-    const url = queryString ? `/secretaries/patients/?${queryString}` : '/secretaries/patients/';
-    
-    return apiHelpers.get<SecretaryPatientsResponse>(url);
+    // Usar /api/patients/ en su lugar
   },
 
-  /**
-   * Obtener un paciente específico
-   * GET /api/secretaries/patients/{id}/
-   */
   getPatient: async (patientId: number): Promise<SecretaryPatient> => {
-    return apiHelpers.get<SecretaryPatient>(`/secretaries/patients/${patientId}/`);
+    // Usar /api/patients/{id}/ en su lugar
   },
 
-  /**
-   * Crear nuevo paciente
-   * POST /api/secretaries/patients/
-   */
   createPatient: async (patientData: PatientData): Promise<SecretaryPatient> => {
-    return apiHelpers.post<SecretaryPatient>('/secretaries/patients/', patientData);
+    // Usar /api/patients/ en su lugar
   },
 
-  /**
-   * Actualizar información de paciente
-   * PATCH /api/secretaries/patients/{id}/
-   */
-  updatePatient: async (
-    patientId: number,
-    updateData: Partial<PatientData>
-  ): Promise<SecretaryPatient> => {
-    return apiHelpers.patch<SecretaryPatient>(
-      `/secretaries/patients/${patientId}/`,
-      updateData
-    );
+  updatePatient: async (patientId: number, updateData: Partial<PatientData>): Promise<SecretaryPatient> => {
+    // Usar /api/patients/{id}/ en su lugar
   },
 
-  /**
-   * Obtener historial de citas de un paciente
-   * GET /api/secretaries/patients/{id}/appointments/
-   */
-  getPatientAppointments: async (
-    patientId: number,
-    filters?: { date_from?: string; date_to?: string }
-  ): Promise<SecretaryAppointment[]> => {
-    const params = new URLSearchParams();
-    
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value) params.append(key, value);
-      });
-    }
-
-    const queryString = params.toString();
-    const url = queryString 
-      ? `/secretaries/patients/${patientId}/appointments/?${queryString}`
-      : `/secretaries/patients/${patientId}/appointments/`;
-    
-    return apiHelpers.get<SecretaryAppointment[]>(url);
+  getPatientAppointments: async (patientId: number, filters?: { date_from?: string; date_to?: string }): Promise<SecretaryAppointment[]> => {
+    // Usar /api/patients/{id}/appointments/ en su lugar
   },
+  */
 
   // ==========================================
   // GESTIÓN DE DOCTORES Y HORARIOS
   // ==========================================
+  
+  // NOTA: Los siguientes endpoints de doctores no están implementados en el backend actual
+  // TODO: Implementar en el backend si son necesarios
+  // Se pueden usar los endpoints generales de doctores: /api/doctors/
 
-  /**
-   * Obtener lista de doctores disponibles
-   * GET /api/secretaries/doctors/
-   */
-  getAvailableDoctors: async (filters?: {
-    specialization?: string;
-    is_available?: boolean;
-    date?: string;
-  }): Promise<AvailableDoctor[]> => {
-    const params = new URLSearchParams();
-    
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          params.append(key, value.toString());
-        }
-      });
-    }
-
-    const queryString = params.toString();
-    const url = queryString ? `/secretaries/doctors/?${queryString}` : '/secretaries/doctors/';
-    
-    return apiHelpers.get<AvailableDoctor[]>(url);
+  /*
+  getAvailableDoctors: async (filters?: { specialization?: string; is_available?: boolean; date?: string; }): Promise<AvailableDoctor[]> => {
+    // Usar /api/doctors/ en su lugar
   },
 
-  /**
-   * Obtener horarios disponibles de un doctor específico
-   * GET /api/secretaries/doctors/{id}/available-slots/
-   */
-  getDoctorAvailableSlots: async (
-    doctorId: number,
-    date: string
-  ): Promise<DoctorAvailableSlots> => {
-    return apiHelpers.get<DoctorAvailableSlots>(
-      `/secretaries/doctors/${doctorId}/available-slots/?date=${date}`
-    );
+  getDoctorAvailableSlots: async (doctorId: number, date: string): Promise<DoctorAvailableSlots> => {
+    // Implementar en el backend si es necesario
   },
 
-  /**
-   * Verificar disponibilidad de un doctor en un horario específico
-   * GET /api/secretaries/doctors/{id}/check-availability/
-   */
-  checkDoctorAvailability: async (
-    doctorId: number,
-    date: string,
-    time: string
-  ): Promise<{ is_available: boolean; reason?: string }> => {
-    return apiHelpers.get(
-      `/secretaries/doctors/${doctorId}/check-availability/?date=${date}&time=${time}`
-    );
+  checkDoctorAvailability: async (doctorId: number, date: string, time: string): Promise<{ is_available: boolean; reason?: string }> => {
+    // Implementar en el backend si es necesario
   },
+  */
 
   // ==========================================
   // REPORTES Y ESTADÍSTICAS
   // ==========================================
+  
+  // NOTA: Los siguientes endpoints de reportes no están implementados en el backend actual
+  // TODO: Implementar en el backend si son necesarios
+  // Se puede usar el endpoint de dashboard: /api/users/secretaries/dashboard/
 
-  /**
-   * Obtener reporte de actividades de la secretaria
-   * GET /api/secretaries/reports/activity/
-   */
-  getActivityReport: async (params: {
-    date_from: string;
-    date_to: string;
-  }): Promise<SecretaryActivityReport[]> => {
-    const queryParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      queryParams.append(key, value);
-    });
-
-    return apiHelpers.get(`/secretaries/reports/activity/?${queryParams.toString()}`);
+  /*
+  getActivityReport: async (params: { date_from: string; date_to: string; }): Promise<SecretaryActivityReport> => {
+    // Usar /api/users/secretaries/dashboard/ o implementar endpoint específico
   },
 
-  /**
-   * Obtener reporte de citas por período
-   * GET /api/secretaries/reports/appointments/
-   */
-  getAppointmentsReport: async (params: {
-    date_from: string;
-    date_to: string;
-    doctor_id?: number;
-    status?: string;
-    format?: 'json' | 'csv' | 'pdf';
-  }): Promise<{
-    total_appointments: number;
-    completed_appointments: number;
-    cancelled_appointments: number;
-    no_show_appointments: number;
-    period_data: Array<{
-      period: string;
-      appointments_count: number;
-      completed_count: number;
-      cancelled_count: number;
-    }>;
-    doctor_stats?: Array<{
-      doctor_id: number;
-      doctor_name: string;
-      appointments_count: number;
-      completion_rate: number;
-    }>;
-  }> => {
-    const queryParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        queryParams.append(key, value.toString());
-      }
-    });
-
-    return apiHelpers.get(`/secretaries/reports/appointments/?${queryParams.toString()}`);
+  getAppointmentsReport: async (params: { date_from: string; date_to: string; group_by?: 'date' | 'doctor' | 'status'; include_cancelled?: boolean; }): Promise<any> => {
+    // Implementar en el backend si es necesario
   },
 
-  /**
-   * Obtener estadísticas de pacientes
-   * GET /api/secretaries/reports/patients/
-   */
-  getPatientsReport: async (params: {
-    date_from: string;
-    date_to: string;
-    group_by?: 'day' | 'week' | 'month';
-  }): Promise<{
-    total_patients: number;
-    new_patients: number;
-    returning_patients: number;
-    period_data: Array<{
-      period: string;
-      new_patients: number;
-      total_appointments: number;
-    }>;
-  }> => {
-    const queryParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value) queryParams.append(key, value);
-    });
-
-    return apiHelpers.get(`/secretaries/reports/patients/?${queryParams.toString()}`);
+  getPatientsReport: async (params: { date_from: string; date_to: string; include_inactive?: boolean; }): Promise<any> => {
+    // Implementar en el backend si es necesario
   },
+  */
 
   // ==========================================
   // BÚSQUEDAS Y UTILIDADES
   // ==========================================
 
-  /**
-   * Buscar pacientes por nombre, email o teléfono
-   */
+  // NOTA: Las siguientes funciones dependen de endpoints no implementados
+  // TODO: Descomentar cuando se implementen los endpoints correspondientes
+
+  /*
   searchPatients: async (query: string): Promise<SecretaryPatient[]> => {
     const response = await secretaryService.getPatients({ search: query });
     return response.results;
   },
+  */
 
   /**
    * Buscar citas por criterios múltiples
@@ -408,9 +323,10 @@ export const secretaryService = {
     return response.results;
   },
 
-  /**
-   * Validar si se puede crear una cita en un horario específico
-   */
+  // NOTA: Las siguientes funciones dependen de endpoints no implementados
+  // TODO: Descomentar cuando se implementen los endpoints correspondientes
+
+  /*
   validateAppointmentSlot: async (
     doctorId: number,
     date: string,
@@ -460,9 +376,6 @@ export const secretaryService = {
     }
   },
 
-  /**
-   * Obtener resumen de actividades del día
-   */
   getDailySummary: async (date?: string): Promise<{
     date: string;
     total_appointments: number;
@@ -500,6 +413,7 @@ export const secretaryService = {
       available_doctors: doctors.filter(doc => doc.is_available).length
     };
   }
+  */
 };
 
 // Exportar por defecto

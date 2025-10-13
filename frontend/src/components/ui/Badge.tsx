@@ -21,8 +21,13 @@ const Badge: React.FC<BadgeProps> = ({
     info: 'bg-blue-100 text-blue-800'
   };
 
+  // Si se pasa className personalizada, usarla en lugar del variant
+  const finalClasses = className 
+    ? `${baseClasses} ${className}`
+    : `${baseClasses} ${variantClasses[variant]}`;
+
   return (
-    <span className={`${baseClasses} ${variantClasses[variant]} ${className}`}>
+    <span className={finalClasses}>
       {children}
     </span>
   );

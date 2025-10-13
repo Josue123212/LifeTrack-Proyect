@@ -10,11 +10,17 @@ router.register(r'', DoctorViewSet, basename='doctor')
 profile_router = DefaultRouter()
 profile_router.register(r'', DoctorProfileViewSet, basename='doctor-profile')
 
+# Router para endpoints públicos de doctores
+public_router = DefaultRouter()
+public_router.register(r'', DoctorListViewSet, basename='doctor-public')
+
 app_name = 'doctors'
 
 urlpatterns = [
     # Ruta simple para doctores públicos (debe ir ANTES del router)
     path('public/', public_doctors_list, name='doctor-public-list'),
+    # Router para endpoints públicos de doctores (especializations, stats, search)
+    path('public/', include(public_router.urls)),
     # Ruta directa para el perfil del doctor
     path('me/', doctor_me_view, name='doctor-me'),
     # Router para otros endpoints de perfil de doctor

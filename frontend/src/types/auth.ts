@@ -21,6 +21,8 @@ export interface User {
   avatar?: string;
   address?: string;
   emergencyContact?: string;
+  allergies?: string;
+  medicalConditions?: string;
   patient_profile_id?: number; // ID del perfil de paciente (solo para usuarios con role 'client')
 }
 
@@ -62,10 +64,13 @@ export interface AuthResponse {
 export interface UpdateProfileData {
   firstName?: string;
   lastName?: string;
+  email?: string;
   phone?: string;
   avatar?: string;
   address?: string;
   emergencyContact?: string;
+  allergies?: string;
+  medicalConditions?: string;
 }
 
 /**

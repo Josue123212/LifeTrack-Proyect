@@ -15,7 +15,12 @@ const QuickActions: React.FC = () => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
         </svg>
       ),
-      onClick: () => navigate('/appointments/new'),
+      onClick: () => {
+        console.log('🚀 Botón Nueva Cita clickeado');
+        console.log('📍 Navegando a: /client/appointments');
+        console.log('📦 Estado:', { openModal: true });
+        navigate('/client/appointments', { state: { openModal: true } });
+      },
       variant: 'primary' as const
     },
     {
@@ -27,7 +32,7 @@ const QuickActions: React.FC = () => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       ),
-      onClick: () => navigate('/appointments'),
+      onClick: () => navigate('/client/appointments'),
       variant: 'secondary' as const
     },
     {

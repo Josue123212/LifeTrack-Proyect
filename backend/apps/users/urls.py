@@ -19,7 +19,9 @@ from .views import (
     PasswordResetRequestView,
     PasswordResetVerifyView,
     PasswordResetConfirmView,
+    csrf_token_view,
 )
+from .admin_views import UserTypeSelectionView, create_user_by_type
 # from .oauth_views import google_auth  # Comentado temporalmente para pruebas
 
 # Router para ViewSets
@@ -38,6 +40,7 @@ urlpatterns = [
     path('auth/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('auth/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
+    path('auth/csrf/', csrf_token_view, name='csrf_token'),
     
     # OAuth con Google
     # path('auth/google/', google_auth, name='google_auth'),  # Comentado temporalmente
@@ -62,6 +65,10 @@ urlpatterns = [
     # Utilidades
     path('check-email/', check_email_availability, name='check_email'),
     path('check-username/', check_username_availability, name='check_username'),
+    
+    # Admin URLs para selección de tipo de usuario
+    path('admin/select-type/', UserTypeSelectionView.as_view(), name='user_select_type'),
+    path('admin/create/<str:user_type>/', create_user_by_type, name='create_user_by_type'),
 ]
 
 """

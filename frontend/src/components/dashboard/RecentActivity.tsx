@@ -23,40 +23,40 @@ const RecentActivity: React.FC<RecentActivityProps> = ({
     switch (status) {
       case 'completed':
         return (
-          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--success-light)' }}>
+            <svg className="w-4 h-4" style={{ color: 'var(--success)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
         );
       case 'confirmed':
         return (
-          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--primary-light)' }}>
+            <svg className="w-4 h-4" style={{ color: 'var(--primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
         );
       case 'pending':
         return (
-          <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--warning-light)' }}>
+            <svg className="w-4 h-4" style={{ color: 'var(--warning)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
         );
       case 'cancelled':
         return (
-          <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--error-light)' }}>
+            <svg className="w-4 h-4" style={{ color: 'var(--error)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
         );
       default:
         return (
-          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--surface)' }}>
+            <svg className="w-4 h-4" style={{ color: 'var(--text-muted)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
@@ -98,7 +98,7 @@ const RecentActivity: React.FC<RecentActivityProps> = ({
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-xl lg:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 lg:p-8">
+      <div className="rounded-xl lg:rounded-2xl shadow-sm p-4 sm:p-6 lg:p-8" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)' }}>
         <div className="flex items-center justify-center h-48">
           <LoadingSpinner size="md" />
         </div>
@@ -107,30 +107,30 @@ const RecentActivity: React.FC<RecentActivityProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-xl lg:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 lg:p-8">
+    <div className="rounded-xl lg:rounded-2xl shadow-sm p-4 sm:p-6 lg:p-8" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)' }}>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-light text-gray-800 mb-1">
+          <h2 className="text-xl font-light mb-1" style={{ color: 'var(--text-primary)' }}>
             Actividad Reciente
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             Últimas actualizaciones
           </p>
         </div>
         
-        <button className="text-teal-600 hover:text-teal-700 text-sm font-medium transition-colors duration-200">
+        <button className="text-sm font-medium transition-colors duration-200" style={{ color: 'var(--primary)' }}>
           Ver todo
         </button>
       </div>
 
       {appointments.length === 0 ? (
         <div className="text-center py-8">
-          <div className="w-12 h-12 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--surface)' }}>
+            <svg className="w-6 h-6" style={{ color: 'var(--text-muted)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <p className="text-gray-500 text-sm">
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             No hay actividad reciente
           </p>
         </div>
@@ -139,7 +139,17 @@ const RecentActivity: React.FC<RecentActivityProps> = ({
           {appointments.slice(0, 5).map((appointment, index) => (
             <div
               key={appointment.id}
-              className="group flex items-start space-x-4 p-3 rounded-lg hover:bg-gray-50 transition-all duration-200 cursor-pointer"
+              className="group flex items-start space-x-4 p-3 rounded-lg transition-all duration-200 cursor-pointer hover:bg-opacity-50"
+              style={{ 
+                '--hover-bg': 'var(--surface)',
+                backgroundColor: 'transparent'
+              } as React.CSSProperties}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--surface)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
             >
               <div className="flex-shrink-0">
                 {getActivityIcon(appointment.status)}
@@ -148,16 +158,16 @@ const RecentActivity: React.FC<RecentActivityProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-800 group-hover:text-gray-900 transition-colors duration-200">
+                    <p className="text-sm font-medium transition-colors duration-200" style={{ color: 'var(--text-primary)' }}>
                       {getActivityText(appointment)}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
                       {appointment.specialty}
                     </p>
                   </div>
                   
                   <div className="flex-shrink-0 ml-4">
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                       {getTimeAgo(appointment.date)}
                     </p>
                   </div>
@@ -165,7 +175,7 @@ const RecentActivity: React.FC<RecentActivityProps> = ({
               </div>
               
               <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" style={{ color: 'var(--text-muted)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </div>
@@ -173,8 +183,8 @@ const RecentActivity: React.FC<RecentActivityProps> = ({
           ))}
           
           {appointments.length > 5 && (
-            <div className="pt-4 border-t border-gray-100">
-              <button className="w-full text-center text-sm text-teal-600 hover:text-teal-700 font-medium transition-colors duration-200">
+            <div className="pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+              <button className="w-full text-center text-sm font-medium transition-colors duration-200" style={{ color: 'var(--primary)' }}>
                 Ver {appointments.length - 5} actividades más
               </button>
             </div>

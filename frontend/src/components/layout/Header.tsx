@@ -3,6 +3,7 @@ import { Bars3Icon, BellIcon, UserCircleIcon, ChevronDownIcon } from '@heroicons
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
+import ProfileModal from '../modals/ProfileModal';
 
 /**
  * 🎯 HEADER COMPONENT
@@ -18,9 +19,10 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick, showMenuButton = true }) => {
   const { user, logout } = useAuth();
-  const { unreadCount, hasUnread, markAllAsRead } = useNotifications();
+  const { notifications, unreadCount, hasUnread, markAllAsRead, markAsRead } = useNotifications();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
@@ -149,14 +151,64 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, showMenuButton = true }) =
                 </div>
                 
                 <div className="max-h-96 overflow-y-auto">
-                  {hasUnread ? (
-                    <div className="p-4">
-                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        Tienes {unreadCount} notificación{unreadCount !== 1 ? 'es' : ''} sin leer
-                      </p>
-                      <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>
-                        Las notificaciones se cargarán automáticamente...
-                      </p>
+                  {notifications.length > 0 ? (
+                    <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                      {notifications.slice(0, 10).map((notification) => (
+                        <div 
+                          key={notification.id}
+                          className={`p-4 hover:bg-opacity-50 transition-colors duration-200 cursor-pointer ${
+                            !notification.is_read ? 'border-l-4' : ''
+                          }`}
+                          style={{ 
+                            backgroundColor: !notification.is_read ? 'var(--primary-light)' : 'transparent',
+                            borderLeftColor: !notification.is_read ? 'var(--primary)' : 'transparent'
+                          }}
+                          onClick={() => markAsRead(notification.id)}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <h4 
+                                className={`text-sm font-medium truncate ${
+                                  !notification.is_read ? 'font-semibold' : ''
+                                }`}
+                                style={{ color: 'var(--text-primary)' }}
+                              >
+                                {notification.title}
+                              </h4>
+                              <p 
+                                className="text-sm mt-1 line-clamp-2"
+                                style={{ color: 'var(--text-secondary)' }}
+                              >
+                                {notification.message}
+                              </p>
+                              <p 
+                                className="text-xs mt-2"
+                                style={{ color: 'var(--text-secondary)' }}
+                              >
+                                {new Date(notification.created_at).toLocaleDateString('es-ES', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                            </div>
+                            {!notification.is_read && (
+                              <div 
+                                className="w-2 h-2 rounded-full ml-2 mt-1 flex-shrink-0"
+                                style={{ backgroundColor: 'var(--primary)' }}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {notifications.length > 10 && (
+                        <div className="p-4 text-center">
+                          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                            Mostrando las 10 notificaciones más recientes
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="p-4 text-center">
@@ -220,7 +272,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, showMenuButton = true }) =
                     className="text-sm font-medium"
                     style={{ color: 'var(--text-primary)' }}
                   >
-                    {user?.firstName} {user?.lastName}
+                    {user?.firstName || 'Usuario'} {user?.lastName || ''}
                   </p>
                   <p 
                     className="text-xs"
@@ -238,9 +290,12 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, showMenuButton = true }) =
 
                 {/* Menu Items */}
                 <div className="py-1">
-                  <Link
-                    to="/client/profile"
-                    className="flex items-center px-4 py-2 text-sm transition-colors duration-200"
+                  <button
+                    onClick={() => {
+                      setIsProfileModalOpen(true);
+                      setIsDropdownOpen(false);
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm transition-colors duration-200"
                     style={{ color: 'var(--text-primary)' }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = 'var(--primary-light)';
@@ -248,11 +303,10 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, showMenuButton = true }) =
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
                     }}
-                    onClick={() => setIsDropdownOpen(false)}
                   >
                     <UserCircleIcon className="h-4 w-4 mr-3" />
                     Mi Perfil
-                  </Link>
+                  </button>
                   
                   <button
                     onClick={handleLogout}
@@ -274,6 +328,12 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, showMenuButton = true }) =
           </div>
         </div>
       </div>
+
+      {/* Profile Modal */}
+      <ProfileModal 
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
     </header>
   );
 };

@@ -91,43 +91,46 @@ export interface DoctorDashboardStats extends BaseDashboardStats {
 }
 
 /**
- * Dashboard para Secretaria
+ * Dashboard para Secretaria - Actualizado para coincidir con el backend
  */
 export interface SecretaryDashboardStats extends BaseDashboardStats {
   user_role: 'secretary';
-  total_appointments_today: number;
-  pending_appointments: number;
-  confirmed_appointments: number;
-  cancelled_appointments: number;
-  total_patients: number;
-  new_patients_today: number;
-  new_patients_this_week: number;
-  doctors_available: number;
-  total_doctors: number;
-  busy_doctors: number;
-  upcoming_appointments: Array<{
+  secretary_info: {
     id: number;
-    patient_name: string;
-    doctor_name: string;
-    time: string;
-    status: string;
-  }>;
-  pending_confirmations: Array<{
+    name: string;
+    employee_id: string;
+    department: string;
+    can_manage_appointments: boolean;
+    can_manage_patients: boolean;
+  };
+  appointments_today: {
+    total: number;
+    scheduled: number;
+    confirmed: number;
+    completed: number;
+    cancelled: number;
+  };
+  appointments_this_week: {
+    total: number;
+    pending_confirmation: number;
+  };
+  patients: {
+    total: number;
+    new_today: number;
+    new_this_week: number;
+  };
+  doctors: {
+    total: number;
+    available: number;
+    busy_today: number;
+  };
+  pending_appointments: Array<{
     id: number;
     patient_name: string;
     doctor_name: string;
     date: string;
     time: string;
-  }>;
-  recent_activities: Array<{
-    id: number;
-    action: string;
-    description: string;
-    timestamp: string;
-  }>;
-  daily_appointments_chart: Array<{
-    hour: string;
-    appointments: number;
+    reason: string;
   }>;
 }
 
@@ -184,6 +187,10 @@ export interface AdminDashboardStats extends BaseDashboardStats {
     appointments_count: number;
     revenue: number;
   }>;
+  // Métricas de rendimiento
+  completion_rate: number;
+  cancellation_rate: number;
+  no_show_rate: number;
 }
 
 /**
@@ -492,7 +499,7 @@ export const dashboardService = {
       `/api/dashboard/${role}/export/?${params.toString()}`,
       {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
       }
     );

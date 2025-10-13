@@ -110,35 +110,35 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
         <div className="space-y-4">
           {/* 👨‍⚕️ Información del Doctor */}
           <div className="flex items-start space-x-3">
-            <UserIcon className="h-5 w-5 text-gray-400 mt-0.5" />
+            <UserIcon className="h-5 w-5 mt-0.5" style={{ color: 'var(--text-muted)' }} />
             <div>
-              <p className="font-medium text-gray-900">
-                Dr. {appointment.doctor_info.user.first_name} {appointment.doctor_info.user.last_name}
+              <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                Dr. Pedro García
               </p>
-              <p className="text-sm text-gray-600">
-                {appointment.doctor_info.specialization}
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                Neurologo
               </p>
-              <p className="text-xs text-gray-500">
-                {appointment.doctor_info.years_experience} años de experiencia
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                Especialista
               </p>
             </div>
           </div>
 
           {/* 👤 Información del Paciente */}
           <div className="flex items-start space-x-3">
-            <UserIcon className="h-5 w-5 text-gray-400 mt-0.5" />
+            <UserIcon className="h-5 w-5 mt-0.5" style={{ color: 'var(--text-muted)' }} />
             <div>
-              <p className="font-medium text-gray-900">
-                {appointment.patient_info.user.first_name} {appointment.patient_info.user.last_name}
+              <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                {appointment.patient?.name || 'Paciente no disponible'}
               </p>
-              <p className="text-sm text-gray-600">
-                {appointment.patient_info.user.email}
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                {appointment.patient?.email}
               </p>
-              {appointment.patient_info.user.phone && (
+              {appointment.patient?.phone_number && (
                 <div className="flex items-center space-x-1 mt-1">
-                  <PhoneIcon className="h-3 w-3 text-gray-400" />
-                  <p className="text-xs text-gray-500">
-                    {appointment.patient_info.user.phone}
+                  <PhoneIcon className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {appointment.patient.phone_number}
                   </p>
                 </div>
               )}
@@ -148,26 +148,26 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
           {/* 📅 Fecha y Hora */}
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <CalendarIcon className="h-5 w-5 text-gray-400" />
-              <span className="text-sm text-gray-700">
-                {formatDate(appointment.date)}
+              <CalendarIcon className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
+              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                {formatDate(appointment.appointment_date)}
               </span>
             </div>
             <div className="flex items-center space-x-2">
-              <ClockIcon className="h-5 w-5 text-gray-400" />
-              <span className="text-sm text-gray-700">
-                {formatTime(appointment.time)}
+              <ClockIcon className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
+              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                {formatTime(appointment.appointment_time)}
               </span>
             </div>
           </div>
 
           {/* 📝 Motivo de la cita */}
           {appointment.reason && (
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-sm font-medium text-gray-700 mb-1">
+            <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--surface)' }}>
+              <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
                 Motivo de la consulta:
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                 {appointment.reason}
               </p>
             </div>
@@ -175,11 +175,11 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
 
           {/* 📋 Notas adicionales */}
           {appointment.notes && (
-            <div className="bg-blue-50 rounded-lg p-3">
-              <p className="text-sm font-medium text-gray-700 mb-1">
+            <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--primary-light)' }}>
+              <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
                 Notas:
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                 {appointment.notes}
               </p>
             </div>

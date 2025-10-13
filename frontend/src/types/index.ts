@@ -22,6 +22,7 @@ export type {
   DoctorProfile,
   DoctorProfileData,
   DoctorBasicInfo,
+  DoctorDetail,
   DoctorSchedule,
   DoctorStats,
   DoctorAppointment,
@@ -30,6 +31,9 @@ export type {
   DoctorsListResponse,
   DoctorFilters
 } from './doctor';
+
+// Alias para compatibilidad con componentes existentes
+export type { DoctorBasicInfo as Doctor } from './doctor';
 
 // ==========================================
 // TIPOS DE SECRETARIAS

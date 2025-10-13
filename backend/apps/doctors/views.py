@@ -13,12 +13,13 @@ from .models import Doctor
 from .serializers import (
     DoctorSerializer,
     DoctorCreateSerializer,
+    DoctorCreateWithUserSerializer,
     DoctorUpdateSerializer,
     DoctorListSerializer,
     DoctorPublicSerializer,
     DoctorProfileSerializer
 )
-from apps.appointments.filters import DoctorFilter
+from .filters import DoctorFilter
 from apps.appointments.models import Appointment
 from core.permissions import IsDoctor, IsDoctorOrAdmin, IsAdminOrSuperAdmin
 
@@ -89,11 +90,13 @@ class DoctorViewSet(viewsets.ModelViewSet):
         Retorna la clase de serializer apropiada según la acción.
         """
         if self.action == 'create':
-            return DoctorCreateSerializer
+            return DoctorCreateWithUserSerializer
         elif self.action in ['update', 'partial_update']:
             return DoctorUpdateSerializer
         elif self.action == 'list':
             return DoctorListSerializer
+        elif self.action == 'retrieve':
+            return DoctorProfileSerializer
         elif self.action == 'public_profile':
             return DoctorPublicSerializer
         return DoctorSerializer
@@ -115,7 +118,7 @@ class DoctorViewSet(viewsets.ModelViewSet):
         elif self.action in ['create', 'destroy']:
             permission_classes = [permissions.IsAuthenticated, IsAdminOrSuperAdmin]
         
-        # Endpoints de actualización (doctor propietario o admin)
+        # Endpoints de actualización (doctor propietario o admin, pero solo admin puede cambiar status)
         elif self.action in ['update', 'partial_update']:
             permission_classes = [permissions.IsAuthenticated, IsDoctorOrAdmin]
         
@@ -206,14 +209,53 @@ class DoctorViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         """
         Actualizar doctor completo o parcial.
+        Solo administradores pueden cambiar el status del doctor.
         """
+        import logging
+        logger = logging.getLogger('django.request')
+        
+        logger.info(f"🔍 UPDATE REQUEST - User: {request.user.username} (admin: {request.user.is_admin()})")
+        logger.info(f"🔍 UPDATE REQUEST - Data: {request.data}")
+        logger.info(f"🔍 UPDATE REQUEST - Content-Type: {request.content_type}")
+        
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
+        
+        logger.info(f"🔍 UPDATE REQUEST - Doctor ID: {instance.id}, Current status: {instance.status}")
+        
+        # Verificar si se está intentando cambiar el status
+        if 'status' in request.data:
+            logger.info(f"🔍 UPDATE REQUEST - Intentando cambiar status a: {request.data['status']}")
+            # Solo administradores pueden cambiar el status
+            if not request.user.is_admin():
+                logger.warning(f"❌ UPDATE REQUEST - Usuario sin permisos para cambiar status")
+                return Response(
+                    {
+                        'error': 'Sin permisos',
+                        'detail': 'Solo los administradores pueden cambiar el estado del doctor'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        logger.info(f"🔍 UPDATE REQUEST - Serializer class: {serializer.__class__.__name__}")
         
         try:
-            serializer.is_valid(raise_exception=True)
+            is_valid = serializer.is_valid(raise_exception=False)
+            logger.info(f"🔍 UPDATE REQUEST - Serializer valid: {is_valid}")
+            
+            if not is_valid:
+                logger.error(f"❌ UPDATE REQUEST - Serializer errors: {serializer.errors}")
+                return Response(
+                    {
+                        'error': 'Datos inválidos',
+                        'detail': serializer.errors
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
             doctor = serializer.save()
+            logger.info(f"✅ UPDATE REQUEST - Doctor actualizado exitosamente")
             
             return Response(
                 {
@@ -223,6 +265,10 @@ class DoctorViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_200_OK
             )
         except Exception as e:
+            logger.error(f"❌ UPDATE REQUEST - Exception: {str(e)}")
+            logger.error(f"❌ UPDATE REQUEST - Exception type: {type(e).__name__}")
+            import traceback
+            logger.error(f"❌ UPDATE REQUEST - Traceback: {traceback.format_exc()}")
             return Response(
                 {
                     'error': 'Error al actualizar doctor',
@@ -246,16 +292,17 @@ class DoctorListViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = DoctorPublicSerializer
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['specialization', 'is_available']
+    filterset_class = DoctorFilter
     search_fields = ['user__first_name', 'user__last_name', 'specialization', 'bio']
     ordering_fields = ['user__first_name', 'user__last_name', 'specialization', 'consultation_fee']
     ordering = ['user__first_name']
     
     def get_queryset(self):
-        """Filtrar solo doctores disponibles para endpoints públicos."""
+        """Filtrar solo doctores disponibles y activos para endpoints públicos."""
         return Doctor.objects.filter(
             is_available=True,
-            user__is_active=True
+            user__is_active=True,
+            status__in=['active', 'inactive']  # Excluir doctores inhabilitados
         ).select_related('user')
     
     @action(detail=False, methods=['get'], url_path='specializations')
@@ -278,6 +325,39 @@ class DoctorListViewSet(viewsets.ReadOnlyModelViewSet):
                 'data': {
                     'specializations': list(specializations),
                     'total_specializations': len(specializations)
+                }
+            },
+            status=status.HTTP_200_OK
+        )
+    
+    @action(detail=False, methods=['get'], url_path='stats')
+    def general_stats(self, request):
+        """
+        GET /api/doctors/public/stats/
+        Obtener estadísticas generales del sistema (total de doctores y especialidades).
+        """
+        # Total de doctores disponibles
+        total_doctors = Doctor.objects.filter(
+            is_available=True,
+            user__is_active=True
+        ).count()
+        
+        # Total de especialidades únicas
+        specializations = Doctor.objects.filter(
+            is_available=True,
+            user__is_active=True
+        ).values_list('specialization', flat=True).distinct()
+        
+        # Filtrar valores vacíos o None
+        unique_specializations = [spec for spec in specializations if spec and spec.strip()]
+        total_specializations = len(unique_specializations)
+        
+        return Response(
+            {
+                'message': 'Estadísticas generales obtenidas exitosamente',
+                'data': {
+                    'total_doctors': total_doctors,
+                    'total_specializations': total_specializations
                 }
             },
             status=status.HTTP_200_OK
@@ -881,8 +961,8 @@ class DoctorProfileViewSet(viewsets.ViewSet):
                     'name': appointment.patient.user.get_full_name(),
                     'email': appointment.patient.user.email
                 },
-                'appointment_date': appointment.appointment_date.isoformat(),
-                'appointment_time': appointment.appointment_time.strftime('%H:%M'),
+                'appointment_date': appointment.date.isoformat(),
+                'appointment_time': appointment.time.strftime('%H:%M'),
                 'status': appointment.status,
                 'reason': appointment.reason,
                 'notes': appointment.notes,
@@ -906,6 +986,80 @@ class DoctorProfileViewSet(viewsets.ViewSet):
                         'date_to': date_to
                     }
                 }
+            },
+            status=status.HTTP_200_OK
+        )
+    
+    @action(detail=False, methods=['get'], url_path='patients')
+    def my_patients(self, request):
+        """
+        GET /api/doctors/me/patients/
+        Obtener todos los pacientes del doctor logueado.
+        """
+        doctor = self.get_doctor_profile()
+        if not doctor:
+            return Response(
+                {
+                    'error': 'Perfil de doctor no encontrado',
+                    'detail': 'El usuario actual no tiene un perfil de doctor asociado'
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Filtros opcionales
+        search = request.query_params.get('search', None)
+        page = request.query_params.get('page', 1)
+        
+        # Obtener pacientes únicos que han tenido citas con este doctor
+        from apps.patients.models import Patient
+        from django.db.models import Count, Max, Min
+        
+        patients_query = Patient.objects.filter(
+            appointments__doctor=doctor
+        ).select_related('user').annotate(
+            total_appointments=Count('appointments'),
+            last_appointment=Max('appointments__date'),
+            first_appointment=Min('appointments__date')
+        ).distinct().order_by('-last_appointment')
+        
+        # Aplicar filtro de búsqueda
+        if search:
+            patients_query = patients_query.filter(
+                Q(user__first_name__icontains=search) |
+                Q(user__last_name__icontains=search) |
+                Q(user__email__icontains=search)
+            )
+        
+        # Serializar datos
+        patients_data = []
+        for patient in patients_query:
+            # Obtener próxima cita
+            next_appointment = Appointment.objects.filter(
+                doctor=doctor,
+                patient=patient,
+                date__gte=timezone.now().date(),
+                status__in=['scheduled', 'confirmed']
+            ).order_by('date', 'time').first()
+            
+            patients_data.append({
+                'id': patient.id,
+                'user': {
+                    'first_name': patient.user.first_name,
+                    'last_name': patient.user.last_name,
+                    'email': patient.user.email,
+                    'phone': getattr(patient.user, 'phone', None)
+                },
+                'total_appointments': patient.total_appointments,
+                'last_appointment': patient.last_appointment.isoformat() if patient.last_appointment else None,
+                'next_appointment': next_appointment.date.isoformat() if next_appointment else None
+            })
+        
+        return Response(
+            {
+                'count': len(patients_data),
+                'next': None,  # Simplificado por ahora
+                'previous': None,  # Simplificado por ahora
+                'results': patients_data
             },
             status=status.HTTP_200_OK
         )

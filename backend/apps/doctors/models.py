@@ -11,6 +11,14 @@ class Doctor(models.Model):
     Modelo para representar un doctor en el sistema.
     Extiende la información del usuario base con datos específicos del doctor.
     """
+    
+    # Opciones de estado del doctor
+    STATUS_CHOICES = [
+        ('active', 'Activo'),
+        ('inactive', 'Inactivo'),
+        ('disabled', 'Inhabilitado'),
+    ]
+    
     user = models.OneToOneField(
         User, 
         on_delete=models.CASCADE,
@@ -46,6 +54,17 @@ class Doctor(models.Model):
         verbose_name="Biografía",
         help_text="Información adicional sobre el doctor"
     )
+    
+    # Campo de estado del doctor
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='active',
+        verbose_name="Estado",
+        help_text="Estado actual del doctor en el sistema"
+    )
+    
+    # Mantener is_available para compatibilidad hacia atrás
     is_available = models.BooleanField(
         default=True,
         verbose_name="Disponible",
@@ -109,6 +128,86 @@ class Doctor(models.Model):
         self.is_available = not self.is_available
         self.save(update_fields=['is_available', 'updated_at'])
         return self.is_available
+    
+    def set_status(self, new_status):
+        """Establece el estado del doctor."""
+        if new_status in dict(self.STATUS_CHOICES):
+            self.status = new_status
+            # Actualizar is_available basado en el estado
+            self.is_available = new_status == 'active'
+            
+            # Desactivar/activar usuario según el estado
+            if new_status == 'disabled':
+                # Si está inhabilitado, desactivar la cuenta del usuario
+                self.user.is_active = False
+                self.user.save(update_fields=['is_active'])
+            elif new_status == 'active':
+                # Si está activo, activar la cuenta del usuario
+                self.user.is_active = True
+                self.user.save(update_fields=['is_active'])
+            # Para 'inactive', mantener el usuario activo pero el doctor no disponible
+            
+            self.save(update_fields=['status', 'is_available', 'updated_at'])
+            return True
+        return False
+    
+    def disable_doctor(self):
+        """Inhabilita al doctor."""
+        return self.set_status('disabled')
+    
+    def activate_doctor(self):
+        """Activa al doctor."""
+        return self.set_status('active')
+    
+    def deactivate_doctor(self):
+        """Desactiva temporalmente al doctor."""
+        return self.set_status('inactive')
+    
+    @property
+    def is_active(self):
+        """Verifica si el doctor está activo."""
+        return self.status == 'active'
+    
+    @property
+    def is_disabled(self):
+        """Verifica si el doctor está inhabilitado."""
+        return self.status == 'disabled'
+    
+    @property
+    def status_display(self):
+        """Retorna el texto legible del estado."""
+        return dict(self.STATUS_CHOICES).get(self.status, 'Desconocido')
+    
+    @property
+    def can_access_system(self):
+        """Verifica si el doctor puede acceder al sistema."""
+        return self.status != 'disabled' and self.user.is_active
+    
+    @property
+    def status_color(self):
+        """Retorna el color asociado al estado para el frontend considerando estado y disponibilidad."""
+        if self.status == 'disabled':
+            return '#ef4444'  # Rojo - Inhabilitado
+        elif self.status == 'inactive':
+            return '#f59e0b'  # Amarillo - Inactivo
+        elif self.status == 'active':
+            # Si está activo, color basado en disponibilidad
+            return '#10b981' if self.is_available else '#6b7280'  # Verde si disponible, gris si ocupado
+        else:
+            return '#6b7280'  # Gris por defecto
+    
+    @property
+    def status_badge_text(self):
+        """Retorna el texto del badge para el frontend considerando estado y disponibilidad."""
+        if self.status == 'disabled':
+            return 'Inhabilitado'
+        elif self.status == 'inactive':
+            return 'Inactivo'
+        elif self.status == 'active':
+            # Si está activo, mostrar disponibilidad real
+            return 'Disponible' if self.is_available else 'Ocupado'
+        else:
+            return 'Desconocido'
     
     def is_working_day(self, day_name):
         """Verifica si el doctor trabaja en un día específico."""

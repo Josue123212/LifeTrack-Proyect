@@ -6,6 +6,9 @@ from django.utils import timezone
 from datetime import datetime, timedelta, time
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
+import logging
+
+logger = logging.getLogger(__name__)
 
 from core.permissions import (
     IsAppointmentParticipant, 
@@ -68,7 +71,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     
     queryset = Appointment.objects.select_related('doctor__user', 'patient__user').all()
     serializer_class = AppointmentSerializer
-    permission_classes = [permissions.AllowAny]  # Temporal para pruebas
+    # Los permisos se configuran dinámicamente en get_permissions()
     
     # Configuración de filtros
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -117,17 +120,25 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         elif self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
             permission_classes = [permissions.IsAuthenticated, IsAppointmentParticipant]
         
-        # Acciones de gestión de citas: doctores, secretarias y administradores
-        elif self.action in ['confirm', 'cancel', 'complete', 'reschedule']:
+        # Confirmar, completar y reprogramar: solo doctores y administradores
+        elif self.action in ['confirm', 'complete', 'reschedule']:
             permission_classes = [permissions.IsAuthenticated, IsDoctorOrAdmin]
         
-        # Historial y agenda: doctores y administradores
-        elif self.action in ['patient_history', 'doctor_schedule']:
-            permission_classes = [permissions.IsAuthenticated, IsDoctorOrAdmin]
+        # Cancelar: participantes de la cita (pacientes y doctores) o administradores
+        elif self.action == 'cancel':
+            permission_classes = [permissions.IsAuthenticated, IsAppointmentParticipant]
         
-        # Horarios disponibles: cualquier usuario autenticado
-        elif self.action == 'available_slots':
+        # Historial de paciente: cualquier usuario autenticado (se valida en el método)
+        elif self.action == 'patient_history':
             permission_classes = [permissions.IsAuthenticated]
+        
+        # Agenda de doctor: solo doctores y administradores
+        elif self.action == 'doctor_schedule':
+            permission_classes = [permissions.IsAuthenticated, IsDoctorOrAdmin]
+        
+        # Horarios disponibles: acceso público (sin autenticación requerida)
+        elif self.action == 'available_slots':
+            permission_classes = [permissions.AllowAny]
         
         # Por defecto, requiere autenticación
         else:
@@ -151,8 +162,8 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(patient=user.patient_profile)
         
         # Si es un doctor, solo ver sus propias citas
-        elif user.role == 'doctor' and hasattr(user, 'doctor_profile'):
-            queryset = queryset.filter(doctor=user.doctor_profile)
+        elif user.role == 'doctor' and hasattr(user, 'doctor'):
+            queryset = queryset.filter(doctor=user.doctor)
         
         # Si es secretaria, puede ver todas las citas
         elif user.role == 'secretary':
@@ -364,7 +375,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             return True
         
         # El doctor puede modificar sus propias citas
-        if hasattr(user, 'doctor_profile') and appointment.doctor == user.doctor_profile:
+        if hasattr(user, 'doctor') and appointment.doctor == user.doctor:
             return True
         
         return False
@@ -377,8 +388,8 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         appointment = self.get_object()
         
         # Solo el doctor puede confirmar citas
-        if not (hasattr(request.user, 'doctor_profile') and 
-                appointment.doctor == request.user.doctor_profile):
+        if not (hasattr(request.user, 'doctor') and 
+                appointment.doctor == request.user.doctor):
             return Response(
                 {
                     'error': 'Sin permisos',
@@ -422,8 +433,23 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         """
         appointment = self.get_object()
         
+        # DEBUG: Imprimir información de debug
+        logger.error(f"\n=== DEBUG CANCEL APPOINTMENT {appointment.id} ===")
+        logger.error(f"Usuario: {request.user.email} (ID: {request.user.id})")
+        logger.error(f"Rol: {request.user.role}")
+        logger.error(f"Es staff: {request.user.is_staff}")
+        logger.error(f"Tiene patient_profile: {hasattr(request.user, 'patient_profile')}")
+        if hasattr(request.user, 'patient_profile'):
+            logger.error(f"Patient profile ID: {request.user.patient_profile.id}")
+        logger.error(f"Appointment patient ID: {appointment.patient.id}")
+        logger.error(f"Appointment doctor ID: {appointment.doctor.id}")
+        
         # Verificar permisos
-        if not self._can_modify_appointment(request.user, appointment):
+        can_modify = self._can_modify_appointment(request.user, appointment)
+        logger.error(f"Puede modificar: {can_modify}")
+        logger.error("=== FIN DEBUG ===\n")
+        
+        if not can_modify:
             return Response(
                 {
                     'error': 'Sin permisos',
@@ -471,8 +497,8 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         appointment = self.get_object()
         
         # Solo el doctor puede marcar como completada
-        if not (hasattr(request.user, 'doctor_profile') and 
-                appointment.doctor == request.user.doctor_profile):
+        if not (hasattr(request.user, 'doctor') and 
+                appointment.doctor == request.user.doctor):
             return Response(
                 {
                     'error': 'Sin permisos',
@@ -632,9 +658,21 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         
         # Verificar permisos
         user = request.user
+        
+        # DEBUG: Logs para diagnosticar permisos
+        logger.error(f"\n=== DEBUG PATIENT HISTORY ===")
+        logger.error(f"Usuario: {user.email} (ID: {user.id})")
+        logger.error(f"Es staff: {user.is_staff}")
+        logger.error(f"Tiene patient_profile: {hasattr(user, 'patient_profile')}")
+        if hasattr(user, 'patient_profile'):
+            logger.error(f"User patient_profile ID: {user.patient_profile.id}")
+        logger.error(f"Patient solicitado ID: {patient.id}")
+        logger.error(f"Tiene doctor: {hasattr(user, 'doctor')}")
+        logger.error("=== FIN DEBUG ===\n")
+        
         if not (user.is_staff or 
                 (hasattr(user, 'patient_profile') and user.patient_profile == patient) or
-                (hasattr(user, 'doctor_profile'))):
+                (hasattr(user, 'doctor'))):
             return Response(
                 {
                     'error': 'Sin permisos',
@@ -643,9 +681,44 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
         
-        appointments = Appointment.objects.filter(
-            patient=patient
-        ).select_related('doctor__user').order_by('-date', '-time')
+        # Obtener filtros de fecha de los query params
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        status_filter = request.query_params.get('status')
+        
+        # Construir el queryset base
+        appointments = Appointment.objects.filter(patient=patient)
+        
+        # Aplicar filtros de fecha si están presentes
+        if date_from:
+            try:
+                from_date = datetime.strptime(date_from, '%Y-%m-%d').date()
+                appointments = appointments.filter(date__gte=from_date)
+                logger.error(f"Aplicando filtro date_from: {from_date}")
+            except ValueError:
+                logger.error(f"Formato de fecha inválido para date_from: {date_from}")
+        
+        if date_to:
+            try:
+                to_date = datetime.strptime(date_to, '%Y-%m-%d').date()
+                appointments = appointments.filter(date__lte=to_date)
+                logger.error(f"Aplicando filtro date_to: {to_date}")
+            except ValueError:
+                logger.error(f"Formato de fecha inválido para date_to: {date_to}")
+        
+        # Aplicar filtro de estado si está presente
+        if status_filter:
+            appointments = appointments.filter(status=status_filter)
+            logger.error(f"Aplicando filtro status: {status_filter}")
+        
+        # Finalizar queryset con relaciones y ordenamiento
+        appointments = appointments.select_related('doctor__user').order_by('-date', '-time')
+        
+        # Log para debugging
+        logger.error(f"Total de citas encontradas después de filtros: {appointments.count()}")
+        if appointments.exists():
+            logger.error(f"Primera cita: {appointments.first().date} - {appointments.first().time}")
+            logger.error(f"Última cita: {appointments.last().date} - {appointments.last().time}")
         
         serializer = AppointmentListSerializer(appointments, many=True)
         

@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { doctorService } from '../../services';
-import type { DoctorFilters } from '../../types';
+import type { DoctorFilters, Doctor } from '../../types';
+import AdminLayout from '../../components/layout/AdminLayout';
 import { 
   Card, 
   CardContent, 
@@ -18,13 +19,15 @@ import {
   UserIcon, 
   MagnifyingGlassIcon,
   FunnelIcon,
-  EyeIcon,
-  CalendarIcon,
-  CurrencyDollarIcon,
-  ClockIcon,
+  PlusIcon,
+  Squares2X2Icon,
+  TableCellsIcon,
   CheckCircleIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
+import DoctorCreateModal from '../../components/doctors/DoctorCreateModal';
+import DoctorCard from '../../components/doctors/DoctorCard';
+import DoctorTable from '../../components/doctors/DoctorTable';
 
 /**
  * 🎯 OBJETIVO: Lista completa de doctores con filtros y búsqueda
@@ -33,9 +36,12 @@ import {
  * - Ver todos los doctores del sistema
  * - Filtrar por especialización, disponibilidad, etc.
  * - Buscar por nombre o especialización
+ * - Alternar entre vista tarjeta y tabla
  * - Ver detalles básicos de cada doctor
  * - Acceder al perfil completo
  */
+
+type ViewMode = 'cards' | 'table';
 
 const DoctorList: React.FC = () => {
   // ==========================================
@@ -49,6 +55,8 @@ const DoctorList: React.FC = () => {
   const [filters, setFilters] = useState<DoctorFilters>({});
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('cards');
 
   // ==========================================
   // QUERIES
@@ -74,6 +82,47 @@ const DoctorList: React.FC = () => {
     setFilters(prev => ({ ...prev, ...newFilters }));
   };
 
+
+
+  const handleDisableDoctor = async (doctor: Doctor) => {
+    const isCurrentlyDisabled = doctor.status === 'disabled';
+    const action = isCurrentlyDisabled ? 'habilitar' : 'deshabilitar';
+    const newStatus = isCurrentlyDisabled ? 'active' : 'disabled';
+    
+    // 🔔 Confirmación mejorada con más contexto
+    const confirmTitle = isCurrentlyDisabled 
+      ? '🟢 ¿Habilitar Doctor?' 
+      : '🔴 ¿Deshabilitar Doctor?';
+    
+    const confirmMessage = isCurrentlyDisabled 
+      ? `¿Estás seguro de que quieres HABILITAR la cuenta del Dr. ${doctor.full_name}?\n\n✅ El doctor podrá:\n• Acceder al sistema\n• Gestionar sus citas\n• Atender pacientes\n\n¿Continuar?`
+      : `¿Estás seguro de que quieres DESHABILITAR la cuenta del Dr. ${doctor.full_name}?\n\n❌ El doctor NO podrá:\n• Acceder al sistema\n• Gestionar citas\n• Atender pacientes\n\n¿Continuar?`;
+    
+    // Mostrar confirmación
+    if (window.confirm(`${confirmTitle}\n\n${confirmMessage}`)) {
+      try {
+        const result = await doctorService.updateDoctorStatus(doctor.id, newStatus);
+        
+        // ✅ Recargar la lista
+        refetch();
+        
+        // 🎉 Mensaje de éxito mejorado
+        const successMessage = isCurrentlyDisabled 
+          ? `✅ ¡Doctor habilitado exitosamente!\n\nEl Dr. ${doctor.full_name} ya puede acceder al sistema.`
+          : `✅ ¡Doctor deshabilitado exitosamente!\n\nEl Dr. ${doctor.full_name} ya no puede acceder al sistema.`;
+        
+        alert(successMessage);
+        
+      } catch (error) {
+        console.error(`Error al ${action} doctor:`, error);
+        
+        // ❌ Mensaje de error mejorado
+        const errorMessage = `❌ Error al ${action} doctor\n\nNo se pudo ${action} la cuenta del Dr. ${doctor.full_name}.\nPor favor, inténtalo de nuevo.`;
+        alert(errorMessage);
+      }
+    }
+  };
+
   const clearFilters = () => {
     setFilters({});
     setSearchTerm('');
@@ -81,6 +130,10 @@ const DoctorList: React.FC = () => {
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
+  };
+
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === 'cards' ? 'table' : 'cards');
   };
 
   // ==========================================
@@ -100,7 +153,11 @@ const DoctorList: React.FC = () => {
     );
   };
 
-  const formatWorkDays = (workDays: string[]) => {
+  const formatWorkDays = (workDays: string[] | undefined | null) => {
+    if (!workDays || !Array.isArray(workDays)) {
+      return 'No especificado';
+    }
+    
     const dayNames: Record<string, string> = {
       'monday': 'Lun',
       'tuesday': 'Mar',
@@ -133,7 +190,8 @@ const DoctorList: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <AdminLayout>
+      <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -141,6 +199,47 @@ const DoctorList: React.FC = () => {
           <p className="text-gray-600 mt-1">
             {doctorsResponse?.count || 0} doctores registrados
           </p>
+        </div>
+        
+        <div className="flex items-center space-x-3">
+          {/* Toggle de Vista */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+            <Button
+              variant={viewMode === 'cards' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('cards')}
+              className={`flex items-center space-x-2 ${
+                viewMode === 'cards' 
+                  ? 'bg-white shadow-sm text-blue-600' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Squares2X2Icon className="h-4 w-4" />
+              <span>Tarjetas</span>
+            </Button>
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className={`flex items-center space-x-2 ${
+                viewMode === 'table' 
+                  ? 'bg-white shadow-sm text-blue-600' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <TableCellsIcon className="h-4 w-4" />
+              <span>Tabla</span>
+            </Button>
+          </div>
+
+          {/* Botón Crear Doctor */}
+          <Button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2"
+          >
+            <PlusIcon className="h-5 w-5" />
+            <span>Crear Doctor</span>
+          </Button>
         </div>
       </div>
 
@@ -184,7 +283,7 @@ const DoctorList: React.FC = () => {
 
           {/* Panel de filtros */}
           {showFilters && (
-            <div className="mt-4 pt-4 border-t grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="mt-4 pt-4 border-t grid grid-cols-1 md:grid-cols-4 gap-4">
               {/* Filtro por especialización */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -196,6 +295,25 @@ const DoctorList: React.FC = () => {
                   value={filters.specialization || ''}
                   onChange={(e) => updateFilters({ specialization: e.target.value || undefined })}
                 />
+              </div>
+
+              {/* Filtro por estado */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Estado
+                </label>
+                <select
+                  value={filters.status || ''}
+                  onChange={(e) => updateFilters({ 
+                    status: e.target.value || undefined 
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Todos los estados</option>
+                  <option value="active">Activos</option>
+                  <option value="inactive">Inactivos</option>
+                  <option value="disabled">Inhabilitados</option>
+                </select>
               </div>
 
               {/* Filtro por disponibilidad */}
@@ -236,89 +354,39 @@ const DoctorList: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Lista de doctores */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      {/* Vista de Doctores */}
+      {viewMode === 'cards' ? (
+        /* Vista Tarjetas */
+        isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardContent className="p-6">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {doctorsResponse?.results.map((doctor) => (
+              <DoctorCard 
+                 key={doctor.id} 
+                 doctor={doctor}
+                 onDisable={handleDisableDoctor}
+                 onRefresh={refetch}
+               />
+            ))}
+          </div>
+        )
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {doctorsResponse?.results.map((doctor) => (
-            <Card key={doctor.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <UserIcon className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">
-                        Dr. {doctor.user.firstName} {doctor.user.lastName}
-                      </CardTitle>
-                      <p className="text-sm text-gray-600">{doctor.specialization}</p>
-                    </div>
-                  </div>
-                  {getAvailabilityBadge(doctor.is_available)}
-                </div>
-              </CardHeader>
-
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  {/* Experiencia */}
-                  <div className="flex items-center text-sm text-gray-600">
-                    <ClockIcon className="h-4 w-4 mr-2" />
-                    <span>{doctor.years_experience} años de experiencia</span>
-                  </div>
-
-                  {/* Tarifa */}
-                  <div className="flex items-center text-sm text-gray-600">
-                    <CurrencyDollarIcon className="h-4 w-4 mr-2" />
-                    <span>${doctor.consultation_fee} por consulta</span>
-                  </div>
-
-                  {/* Horario */}
-                  <div className="flex items-center text-sm text-gray-600">
-                    <CalendarIcon className="h-4 w-4 mr-2" />
-                    <span>{formatWorkDays(doctor.work_days)}</span>
-                  </div>
-
-                  {/* Horario de trabajo */}
-                  <div className="text-sm text-gray-600">
-                    <span>{doctor.work_start_time} - {doctor.work_end_time}</span>
-                  </div>
-
-                  {/* Bio (truncada) */}
-                  {doctor.bio && (
-                    <p className="text-sm text-gray-700 line-clamp-2">
-                      {doctor.bio}
-                    </p>
-                  )}
-
-                  {/* Acciones */}
-                  <div className="pt-3 border-t">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full flex items-center justify-center space-x-2"
-                      onClick={() => navigate(`/dev/doctors/${doctor.id}`)}
-                    >
-                      <EyeIcon className="h-4 w-4" />
-                      <span>Ver perfil</span>
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        /* Vista Tabla */
+        <DoctorTable 
+          doctors={doctorsResponse?.results || []} 
+          isLoading={isLoading}
+        />
       )}
 
       {/* Estado vacío */}
@@ -338,7 +406,18 @@ const DoctorList: React.FC = () => {
           </CardContent>
         </Card>
       )}
-    </div>
+      </div>
+
+      {/* Modal de Creación de Doctor */}
+      <DoctorCreateModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => {
+          setIsCreateModalOpen(false);
+          refetch(); // Recargar la lista después de crear
+        }}
+      />
+    </AdminLayout>
   );
 };
 

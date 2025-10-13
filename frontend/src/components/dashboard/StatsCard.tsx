@@ -31,59 +31,55 @@ const StatsCard: React.FC<StatsCardProps> = ({
   const baseClasses = "bg-white rounded-lg shadow-sm border border-secondary transition-all duration-300 p-6";
   
   // Colores usando variables CSS del tema
-  const colorClasses = {
-    primary: {
-      icon: "text-primary",
-      value: "text-text-primary",
-      bg: "bg-primary-light",
-      border: "border-primary"
-    },
-    secondary: {
-      icon: "text-secondary",
-      value: "text-text-primary", 
-      bg: "bg-secondary-50",
-      border: "border-secondary"
-    },
-    success: {
-      icon: "text-green-600",
-      value: "text-text-primary",
-      bg: "bg-green-50",
-      border: "border-green-200"
-    },
-    warning: {
-      icon: "text-yellow-600", 
-      value: "text-text-primary",
-      bg: "bg-yellow-50",
-      border: "border-yellow-200"
-    },
-    error: {
-      icon: "text-red-600",
-      value: "text-text-primary", 
-      bg: "bg-red-50",
-      border: "border-red-200"
-    },
-    info: {
-      icon: "text-blue-600",
-      value: "text-text-primary",
-      bg: "bg-blue-50", 
-      border: "border-blue-200"
+  const getColorStyles = (colorType: string) => {
+    switch (colorType) {
+      case 'success':
+        return {
+          iconColor: 'var(--success)',
+          bgColor: 'var(--success-light)',
+          borderColor: 'var(--success)'
+        };
+      case 'warning':
+        return {
+          iconColor: 'var(--warning)',
+          bgColor: 'var(--warning-light)',
+          borderColor: 'var(--warning)'
+        };
+      case 'error':
+        return {
+          iconColor: 'var(--error)',
+          bgColor: 'var(--error-light)',
+          borderColor: 'var(--error)'
+        };
+      case 'info':
+        return {
+          iconColor: 'var(--primary)',
+          bgColor: 'var(--primary-light)',
+          borderColor: 'var(--primary)'
+        };
+      default:
+        return {
+          iconColor: 'var(--primary)',
+          bgColor: 'var(--primary-light)',
+          borderColor: 'var(--primary)'
+        };
     }
   };
 
-  const currentColors = colorClasses[color];
+  const colorStyles = getColorStyles(color);
   const Component = onClick ? 'button' : 'div';
-  const clickableClasses = onClick ? 'cursor-pointer hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2' : '';
+  const clickableClasses = onClick ? 'cursor-pointer hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2' : '';
 
   // Estado de carga
   if (isLoading) {
     return (
       <div className={`${baseClasses} animate-pulse`}>
         <div className="flex items-center space-x-3 mb-4">
-          <div className="w-6 h-6 bg-secondary-200 rounded"></div>
-          <div className="h-4 bg-secondary-200 rounded w-24"></div>
+          <div className="w-6 h-6 rounded" style={{ backgroundColor: 'var(--surface)' }}></div>
+          <div className="h-4 rounded w-24" style={{ backgroundColor: 'var(--surface)' }}></div>
         </div>
-        <div className="h-8 bg-secondary-200 rounded w-16 mb-2"></div>
-        {description && <div className="h-3 bg-secondary-200 rounded w-32"></div>}
+        <div className="h-8 rounded w-16 mb-2" style={{ backgroundColor: 'var(--surface)' }}></div>
+        {description && <div className="h-3 rounded w-32" style={{ backgroundColor: 'var(--surface)' }}></div>}
       </div>
     );
   }
@@ -92,26 +88,33 @@ const StatsCard: React.FC<StatsCardProps> = ({
     <Component
       onClick={onClick}
       className={`${baseClasses} ${clickableClasses}`}
+      style={{ 
+        backgroundColor: 'var(--background)', 
+        border: '1px solid var(--border)',
+        ...(onClick && {
+          '--focus-ring-color': 'var(--primary)'
+        })
+      } as React.CSSProperties}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center space-x-3 mb-4">
             {icon && (
-              <div className={`flex-shrink-0 ${currentColors.icon}`}>
+              <div className="flex-shrink-0" style={{ color: colorStyles.iconColor }}>
                 {icon}
               </div>
             )}
-            <h3 className="text-sm font-medium text-text-secondary uppercase tracking-wide">
+            <h3 className="text-sm font-medium uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
               {title}
             </h3>
           </div>
           
-          <div className={`text-3xl font-bold ${currentColors.value} mb-2`}>
+          <div className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
             {value}
           </div>
           
           {(subtitle || description) && (
-            <p className="text-sm text-text-secondary">
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               {subtitle || description}
             </p>
           )}
@@ -119,9 +122,9 @@ const StatsCard: React.FC<StatsCardProps> = ({
         
         {trend && (
           <div className="flex-shrink-0 ml-4">
-            <div className={`flex items-center space-x-1 text-sm font-medium ${
-              trend.isPositive ? 'text-green-600' : 'text-red-600'
-            }`}>
+            <div className="flex items-center space-x-1 text-sm font-medium" style={{ 
+              color: trend.isPositive ? 'var(--success)' : 'var(--error)' 
+            }}>
               <svg 
                 className={`w-4 h-4 ${
                   trend.isPositive ? 'rotate-0' : 'rotate-180'
@@ -134,7 +137,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
               </svg>
               <span>{Math.abs(trend.value)}%</span>
             </div>
-            <div className="text-xs text-text-secondary mt-1">
+            <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
               {trend.label}
             </div>
           </div>
@@ -142,7 +145,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
       </div>
       
       {onClick && (
-        <div className="mt-4 flex items-center text-sm text-primary font-medium">
+        <div className="mt-4 flex items-center text-sm font-medium" style={{ color: 'var(--primary)' }}>
           <span>Ver detalles</span>
           <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

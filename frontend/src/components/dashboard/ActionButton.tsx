@@ -53,9 +53,15 @@ const ActionButton: React.FC<ActionButtonProps> = ({
     ? "text-primary-light"
     : "text-text-secondary group-hover:text-text-primary";
 
+  const handleClick = () => {
+    console.log('🔥 ActionButton onClick ejecutado');
+    console.log('📝 Title:', title);
+    onClick();
+  };
+
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       disabled={disabled || isLoading}
       className={`
         ${baseClasses}

@@ -61,6 +61,7 @@ const Modal: React.FC<ModalProps> = ({
     
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isOpen) {
+        console.log('⌨️ Modal: Escape presionado - cerrando modal');
         onClose();
       }
     };
@@ -74,7 +75,10 @@ const Modal: React.FC<ModalProps> = ({
       <Dialog 
         as="div" 
         className="relative z-50" 
-        onClose={closeOnOverlayClick ? onClose : () => {}}
+        onClose={closeOnOverlayClick ? () => {
+          console.log('🖱️ Modal: Click en overlay - cerrando modal');
+          onClose();
+        } : () => {}}
       >
         {/* Overlay */}
         <Transition.Child
@@ -125,7 +129,10 @@ const Modal: React.FC<ModalProps> = ({
                       <button
                         type="button"
                         className="ml-4 rounded-md bg-white text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-                        onClick={onClose}
+                        onClick={() => {
+                          console.log('❌ Modal: Botón X presionado - cerrando modal');
+                          onClose();
+                        }}
                       >
                         <span className="sr-only">Cerrar</span>
                         <XMarkIcon className="h-6 w-6" aria-hidden="true" />
@@ -171,9 +178,22 @@ const ModalFooter: React.FC<ModalFooterProps> = ({ children, className }) => {
 export const useModal = (initialState: boolean = false) => {
   const [isOpen, setIsOpen] = React.useState(initialState);
 
-  const openModal = React.useCallback(() => setIsOpen(true), []);
-  const closeModal = React.useCallback(() => setIsOpen(false), []);
+  const openModal = React.useCallback(() => {
+    console.log('🔓 useModal.openModal() llamado - abriendo modal');
+    setIsOpen(true);
+  }, []);
+  
+  const closeModal = React.useCallback(() => {
+    console.log('🔒 useModal.closeModal() llamado - cerrando modal');
+    setIsOpen(false);
+  }, []);
+  
   const toggleModal = React.useCallback(() => setIsOpen(prev => !prev), []);
+
+  // Debug: Log cuando cambia el estado
+  React.useEffect(() => {
+    console.log('🎭 useModal estado cambió:', { isOpen });
+  }, [isOpen]);
 
   return {
     isOpen,

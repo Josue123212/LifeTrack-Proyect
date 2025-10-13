@@ -44,6 +44,56 @@ export interface SecretaryProfile {
 }
 
 /**
+ * Secretaria para listado administrativo
+ */
+export interface SecretaryListItem {
+  id: number;
+  user: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    username: string;
+    phone: string;
+    is_active: boolean;
+  };
+  employee_id: string;
+  department: string;
+  shift_start: string;
+  shift_end: string;
+  can_manage_appointments: boolean;
+  can_manage_patients: boolean;
+  can_view_reports: boolean;
+  hire_date: string;
+  created_at: string;
+  total_appointments_managed?: number;
+  total_patients_registered?: number;
+}
+
+/**
+ * Respuesta paginada de secretarias
+ */
+export interface SecretariesResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: SecretaryListItem[];
+}
+
+/**
+ * Filtros para la lista de secretarias
+ */
+export interface SecretaryFilters {
+  search?: string;
+  department?: string;
+  shift?: string;
+  permissions?: string;
+  status?: string;
+  page?: number;
+  page_size?: number;
+}
+
+/**
  * Datos para crear/actualizar perfil de secretaria
  */
 export interface SecretaryProfileData {

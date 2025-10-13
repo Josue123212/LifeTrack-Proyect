@@ -1,5 +1,6 @@
 import React from 'react';
-import { Calendar, Users, FileText, Settings, Clock, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Calendar, Users, FileText, Settings, Clock, UserPlus, CalendarCheck } from 'lucide-react';
 import { ActionButton } from '../ActionButton';
 
 interface DoctorQuickActionsProps {
@@ -7,14 +8,38 @@ interface DoctorQuickActionsProps {
 }
 
 const DoctorQuickActions: React.FC<DoctorQuickActionsProps> = ({ onAction }) => {
+  const navigate = useNavigate();
+
   const actions = [
+    {
+      id: 'manage-appointments',
+      title: 'Gestionar Citas',
+      description: 'Administrar todas las citas',
+      icon: CalendarCheck,
+      color: 'blue',
+      onClick: () => {
+        console.log('🔍 DEBUG: Clic en botón GESTIONAR CITAS');
+        console.log('🔍 Current location:', window.location.href);
+        console.log('🔍 Navigating to: /doctor/appointments');
+        navigate('/doctor/appointments');
+        console.log('🔍 Navigate called for appointments');
+        onAction?.('manage-appointments');
+      }
+    },
     {
       id: 'view-schedule',
       title: 'Ver Agenda',
       description: 'Revisar citas programadas',
       icon: Calendar,
-      color: 'blue',
-      onClick: () => onAction?.('view-schedule')
+      color: 'cyan',
+      onClick: () => {
+        console.log('🔍 DEBUG: Clic en botón VER AGENDA');
+        console.log('🔍 Current location:', window.location.href);
+        console.log('🔍 Navigating to: /doctor/schedule');
+        navigate('/doctor/schedule');
+        console.log('🔍 Navigate called for schedule');
+        onAction?.('view-schedule');
+      }
     },
     {
       id: 'manage-patients',
@@ -22,7 +47,14 @@ const DoctorQuickActions: React.FC<DoctorQuickActionsProps> = ({ onAction }) => 
       description: 'Gestionar pacientes',
       icon: Users,
       color: 'green',
-      onClick: () => onAction?.('manage-patients')
+      onClick: () => {
+        console.log('🔍 DEBUG: Clic en botón MIS PACIENTES');
+        console.log('🔍 Current location:', window.location.href);
+        console.log('🔍 Navigating to: /doctor/patients');
+        navigate('/doctor/patients');
+        console.log('🔍 Navigate called for patients');
+        onAction?.('manage-patients');
+      }
     },
     {
       id: 'medical-records',
@@ -30,7 +62,14 @@ const DoctorQuickActions: React.FC<DoctorQuickActionsProps> = ({ onAction }) => 
       description: 'Revisar expedientes',
       icon: FileText,
       color: 'purple',
-      onClick: () => onAction?.('medical-records')
+      onClick: () => {
+        console.log('🔍 DEBUG: Clic en botón HISTORIALES');
+        console.log('🔍 Current location:', window.location.href);
+        console.log('🔍 Navigating to: /doctor/patients');
+        navigate('/doctor/patients');
+        console.log('🔍 Navigate called for medical records');
+        onAction?.('medical-records');
+      }
     },
     {
       id: 'availability',
@@ -38,7 +77,14 @@ const DoctorQuickActions: React.FC<DoctorQuickActionsProps> = ({ onAction }) => 
       description: 'Configurar horarios',
       icon: Clock,
       color: 'orange',
-      onClick: () => onAction?.('availability')
+      onClick: () => {
+        console.log('🔍 DEBUG: Clic en botón DISPONIBILIDAD');
+        console.log('🔍 Current location:', window.location.href);
+        console.log('🔍 Navigating to: /doctor/schedule');
+        navigate('/doctor/schedule');
+        console.log('🔍 Navigate called for availability');
+        onAction?.('availability');
+      }
     },
     {
       id: 'new-patient',
@@ -46,7 +92,45 @@ const DoctorQuickActions: React.FC<DoctorQuickActionsProps> = ({ onAction }) => 
       description: 'Registrar paciente',
       icon: UserPlus,
       color: 'indigo',
-      onClick: () => onAction?.('new-patient')
+      onClick: () => {
+        console.log('🔍 DEBUG: Clic en botón NUEVO PACIENTE');
+        console.log('🔍 Current location:', window.location.href);
+        console.log('🔍 Navigating to: /doctor/patients');
+        // Por ahora navega a la lista de pacientes
+        navigate('/doctor/patients');
+        console.log('🔍 Navigate called for new patient');
+        onAction?.('new-patient');
+      }
+    },
+    {
+      id: 'consultations',
+      title: 'Consultas',
+      description: 'Historial médico',
+      icon: FileText,
+      color: 'emerald',
+      onClick: () => {
+        console.log('🚨 DEBUG: ===== CLIC EN CONSULTAS =====');
+        console.log('🔍 Current location:', window.location.href);
+        console.log('🔍 Current pathname:', window.location.pathname);
+        console.log('🔍 Target route: /doctor/consultations');
+        console.log('🔍 Navigate function:', typeof navigate);
+        console.log('🔍 Timestamp:', new Date().toISOString());
+        
+        // Verificar si ya estamos en la ruta
+        if (window.location.pathname === '/doctor/consultations') {
+          console.log('⚠️ Ya estamos en /doctor/consultations');
+        }
+        
+        navigate('/doctor/consultations');
+        console.log('✅ Navigate called for consultations');
+        
+        // Verificar después de un momento
+        setTimeout(() => {
+          console.log('🔍 After navigate - Current location:', window.location.href);
+        }, 100);
+        
+        onAction?.('consultations');
+      }
     },
     {
       id: 'profile-settings',
@@ -54,7 +138,29 @@ const DoctorQuickActions: React.FC<DoctorQuickActionsProps> = ({ onAction }) => 
       description: 'Configurar perfil',
       icon: Settings,
       color: 'gray',
-      onClick: () => onAction?.('profile-settings')
+      onClick: () => {
+        console.log('🚨 DEBUG: ===== CLIC EN MI PERFIL =====');
+        console.log('🔍 Current location:', window.location.href);
+        console.log('🔍 Current pathname:', window.location.pathname);
+        console.log('🔍 Target route: /doctor/profile');
+        console.log('🔍 Navigate function:', typeof navigate);
+        console.log('🔍 Timestamp:', new Date().toISOString());
+        
+        // Verificar si ya estamos en la ruta
+        if (window.location.pathname === '/doctor/profile') {
+          console.log('⚠️ Ya estamos en /doctor/profile');
+        }
+        
+        navigate('/doctor/profile');
+        console.log('✅ Navigate called for profile');
+        
+        // Verificar después de un momento
+        setTimeout(() => {
+          console.log('🔍 After navigate - Current location:', window.location.href);
+        }, 100);
+        
+        onAction?.('profile-settings');
+      }
     }
   ];
 

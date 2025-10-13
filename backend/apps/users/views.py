@@ -165,9 +165,9 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
     
     def get_object(self):
         """
-        Retornar el usuario actual.
+        Retornar el usuario actual con relaciones optimizadas.
         """
-        return self.request.user
+        return User.objects.select_related('patient_profile').get(id=self.request.user.id)
     
     def update(self, request, *args, **kwargs):
         """
@@ -217,6 +217,24 @@ class ChangePasswordView(APIView):
         )
 
 
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def csrf_token_view(request):
+    """
+    Vista para obtener el token CSRF.
+    Permite al frontend obtener el token CSRF necesario para las peticiones.
+    """
+    from django.middleware.csrf import get_token
+    
+    # Obtener el token CSRF
+    csrf_token = get_token(request)
+    
+    return Response({
+        'csrf_token': csrf_token,
+        'message': 'Token CSRF obtenido exitosamente'
+    }, status=status.HTTP_200_OK)
+
+
 # ==========================================
 # SECRETARY VIEWSETS
 # ==========================================
@@ -262,9 +280,54 @@ class SecretaryViewSet(viewsets.ModelViewSet):
         """
         Filtrar queryset basado en el usuario actual.
         """
-        if self.request.user.is_authenticated and self.request.user.is_secretary():
+        if not self.request.user.is_authenticated:
+            return self.queryset.none()
+        
+        # Si es admin o superadmin, puede ver todas las secretarias
+        if self.request.user.is_admin() or self.request.user.is_superuser:
+            return self.queryset.all()
+        
+        # Si es secretaria, solo puede ver su propio perfil
+        if self.request.user.is_secretary():
             return self.queryset.filter(user=self.request.user)
+        
+        # Otros roles no tienen acceso
         return self.queryset.none()
+    
+    def get_serializer_class(self):
+        """
+        Retorna la clase de serializer apropiada según la acción.
+        """
+        if self.action == 'create':
+            from .serializers import SecretaryCreateSerializer
+            return SecretaryCreateSerializer
+        return self.serializer_class
+    
+    def create(self, request, *args, **kwargs):
+        """
+        Crear una nueva secretaria con usuario asociado.
+        """
+        serializer = self.get_serializer(data=request.data)
+        
+        try:
+            serializer.is_valid(raise_exception=True)
+            secretary_profile = serializer.save()
+            
+            return Response(
+                {
+                    'message': 'Secretaria creada exitosamente',
+                    'data': serializer.data
+                },
+                status=status.HTTP_201_CREATED
+            )
+        except Exception as e:
+            return Response(
+                {
+                    'error': 'Error al crear secretaria',
+                    'detail': str(e)
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
     
     @action(detail=False, methods=['get', 'put', 'patch'], url_path='me')
     def me(self, request):

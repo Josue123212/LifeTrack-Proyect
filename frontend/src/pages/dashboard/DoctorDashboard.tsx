@@ -11,6 +11,18 @@ import { dashboardService } from '../../services/dashboardService';
 import type { DoctorDashboardStats } from '../../services/dashboardService';
 
 const DoctorDashboard: React.FC = () => {
+  // 🚨 DEBUG: Componente montado
+  React.useEffect(() => {
+    console.log('🚨 DEBUG: ===== DOCTOR DASHBOARD MOUNTED =====');
+    console.log('🔍 Current URL:', window.location.href);
+    console.log('🔍 Timestamp:', new Date().toISOString());
+    
+    return () => {
+      console.log('🚨 DEBUG: ===== DOCTOR DASHBOARD UNMOUNTED =====');
+      console.log('🔍 Timestamp:', new Date().toISOString());
+    };
+  }, []);
+
   const { user } = useAuth();
 
   // 🔄 Obtener datos del dashboard desde la API
@@ -126,8 +138,8 @@ const DoctorDashboard: React.FC = () => {
         {/* Welcome Section */}
         <WelcomeCard 
           user={user} 
-          customMessage={`¡Buenos días, Dr. ${user?.last_name || 'Doctor'}!`}
-          subtitle="Panel médico - Gestión de pacientes y citas"
+          customMessage={`¡Buenos días, ${dashboardData?.doctor_info?.name || `Dr. ${user?.last_name}` || 'Doctor'}!`}
+          dashboardData={dashboardData}
         />
 
         {/* Stats Section */}

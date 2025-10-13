@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { doctorService } from '../../services';
+import AdminLayout from '../../components/layout/AdminLayout';
 import { 
   Card, 
   CardContent, 
@@ -96,7 +97,11 @@ const DoctorProfile: React.FC = () => {
     );
   };
 
-  const formatWorkDays = (workDays: string[]) => {
+  const formatWorkDays = (workDays: string[] | undefined | null) => {
+    if (!workDays || !Array.isArray(workDays)) {
+      return ['No especificado'];
+    }
+    
     const dayNames: Record<string, string> = {
       'monday': 'Lunes',
       'tuesday': 'Martes',
@@ -122,6 +127,7 @@ const DoctorProfile: React.FC = () => {
   // ==========================================
   if (isLoading) {
     return (
+    <AdminLayout>
       <div className="p-6 space-y-6">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
@@ -138,12 +144,14 @@ const DoctorProfile: React.FC = () => {
           </div>
         </div>
       </div>
+    </AdminLayout>
     );
   }
 
   if (error || !doctor) {
     return (
-      <div className="p-6">
+      <AdminLayout>
+        <div className="p-6">
         <Card>
           <CardContent className="p-6 text-center">
             <p className="text-red-600 mb-4">Error al cargar el perfil del doctor</p>
@@ -152,14 +160,16 @@ const DoctorProfile: React.FC = () => {
             </Button>
           </CardContent>
         </Card>
-      </div>
+        </div>
+      </AdminLayout>
     );
   }
 
   const experienceInfo = getExperienceLevel(doctor.years_experience);
 
   return (
-    <div className="p-6 space-y-6">
+    <AdminLayout>
+      <div className="p-6 space-y-6">
       {/* Header con navegación */}
       <div className="flex items-center space-x-4">
         <Button
@@ -172,7 +182,7 @@ const DoctorProfile: React.FC = () => {
         </Button>
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
-            Dr. {doctor.user.firstName} {doctor.user.lastName}
+            {doctor.full_name}
           </h1>
           <p className="text-gray-600">{doctor.specialization}</p>
         </div>
@@ -197,7 +207,7 @@ const DoctorProfile: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-xl font-semibold">
-                    Dr. {doctor.user.firstName} {doctor.user.lastName}
+                    {doctor.full_name}
                   </h3>
                   <p className="text-gray-600 mb-2">{doctor.specialization}</p>
                   
@@ -205,7 +215,7 @@ const DoctorProfile: React.FC = () => {
                   <div className="space-y-1 text-sm text-gray-600">
                     <div className="flex items-center">
                       <EnvelopeIcon className="h-4 w-4 mr-2" />
-                      <span>{doctor.user.email}</span>
+                      <span>{doctor.email}</span>
                     </div>
                   </div>
                 </div>
@@ -385,7 +395,8 @@ const DoctorProfile: React.FC = () => {
           </Card>
         </div>
       </div>
-    </div>
+      </div>
+    </AdminLayout>
   );
 };
 

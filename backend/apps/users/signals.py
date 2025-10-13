@@ -30,7 +30,9 @@ def create_secretary_profile(sender, instance, created, **kwargs):
                 shift_start='08:00',  # Turno por defecto 8:00 AM
                 shift_end='17:00',    # Turno por defecto 5:00 PM
                 can_manage_appointments=True,
-                can_manage_patients=True
+                can_manage_patients=True,
+                can_view_reports=False,  # Por defecto no puede ver reportes
+                hire_date=None  # Se puede establecer después
             )
             
             logger.info(f"✅ SecretaryProfile creado para usuario: {instance.username} (ID: {instance.id})")

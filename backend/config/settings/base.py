@@ -26,13 +26,13 @@ INSTALLED_APPS = [
     # 'django_celery_beat',  # Comentado temporalmente para pruebas
     # 'django_extensions',  # Comentado temporalmente para pruebas
     
-    # OAuth and Authentication (comentado temporalmente para pruebas)
-    # 'allauth',
-    # 'allauth.account',
-    # 'allauth.socialaccount',
-    # 'allauth.socialaccount.providers.google',
-    # 'dj_rest_auth',
-    # 'dj_rest_auth.registration',
+    # OAuth and Authentication
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
     
     # Local apps
     'apps.core',
@@ -51,7 +51,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    # 'allauth.account.middleware.AccountMiddleware',  # Comentado temporalmente
+    'allauth.account.middleware.AccountMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -99,7 +99,11 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

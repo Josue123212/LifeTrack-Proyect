@@ -12,35 +12,32 @@ export type AppointmentStatus =
 
 /**
  * Información básica del paciente para citas
+ * Coincide con PatientListSerializer del backend
  */
 export interface AppointmentPatient {
   id: number;
-  user: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone?: string;
-  };
-  date_of_birth?: string;
-  medical_history?: string;
+  full_name: string;
+  email: string;
+  age?: number;
+  status_display?: string;
+  status_color?: string;
+  is_active: boolean;
 }
 
 /**
  * Información básica del doctor para citas
+ * Coincide con DoctorListSerializer del backend
  */
 export interface AppointmentDoctor {
   id: number;
-  user: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
-  medical_license: string;
+  full_name: string;
+  email: string;
   specialization: string;
   years_experience: number;
   consultation_fee: number;
+  status_display?: string;
+  status_color?: string;
+  is_active: boolean;
 }
 
 /**
@@ -48,23 +45,30 @@ export interface AppointmentDoctor {
  */
 export interface Appointment {
   id: number;
-  patient: number;
-  doctor: number;
-  patient_info: AppointmentPatient;
-  doctor_info: AppointmentDoctor;
-  date: string; // YYYY-MM-DD
-  time: string; // HH:MM:SS
+  patient: {
+    id: number;
+    name: string;
+    email: string;
+    phone_number?: string;
+  };
+  appointment_date: string; // YYYY-MM-DD
+  appointment_time: string; // HH:MM
   status: AppointmentStatus;
-  status_display: string;
-  status_color: string;
+  status_display?: string;
+  status_color?: string;
   reason: string;
   notes?: string;
-  is_today: boolean;
-  is_past: boolean;
-  can_be_cancelled: boolean;
-  can_be_rescheduled: boolean;
+  is_today?: boolean;
+  is_past?: boolean;
+  can_be_cancelled?: boolean;
+  can_be_rescheduled?: boolean;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
+  // Campos legacy para compatibilidad
+  date?: string;
+  time?: string;
+  patient_info?: AppointmentPatient;
+  doctor_info?: AppointmentDoctor;
 }
 
 /**
@@ -150,10 +154,21 @@ export interface AvailableSlot {
  * Respuesta de horarios disponibles
  */
 export interface AvailableSlotsResponse {
-  doctor_id: number;
-  date: string;
-  available_slots: string[]; // Array de horarios en formato HH:MM
-  booked_slots: string[];
+  message: string;
+  data: {
+    doctor: {
+      id: number;
+      name: string;
+      specialization: string;
+    };
+    date: string;
+    available_slots: Array<{
+      time: string;
+      datetime: string;
+      available: boolean;
+    }>;
+    total_slots: number;
+  };
 }
 
 /**

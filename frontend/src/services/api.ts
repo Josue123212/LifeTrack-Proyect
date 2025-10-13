@@ -3,6 +3,23 @@ import axios from 'axios';
 // 🎯 OBJETIVO: Cliente HTTP centralizado para comunicación con el backend Django
 // 💡 CONCEPTO: Axios instance con configuración base y interceptores para autenticación
 
+// Función para obtener el token CSRF de las cookies
+const getCSRFToken = (): string | null => {
+  const name = 'csrftoken';
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+};
+
 // Crear instancia de Axios con configuración base
 const api = axios.create({
   baseURL: 'http://localhost:8000/api', // URL base del backend Django
@@ -10,11 +27,12 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 10000, // Timeout de 10 segundos
+  withCredentials: true, // Importante para CSRF cookies
 });
 
-// 🔧 INTERCEPTOR DE REQUEST: Agregar token de autenticación automáticamente
+// 🔧 INTERCEPTOR DE REQUEST: Agregar token de autenticación y CSRF automáticamente
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
     // Obtener token del localStorage (corregido para usar 'accessToken')
     const token = localStorage.getItem('accessToken');
     
@@ -23,12 +41,47 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
+    // Agregar token CSRF para métodos que lo requieren
+    if (['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase() || '')) {
+      let csrfToken = getCSRFToken();
+      
+      // Si no hay token CSRF en cookies, obtenerlo del servidor
+      if (!csrfToken) {
+        try {
+          const csrfResponse = await axios.get('http://localhost:8000/api/users/auth/csrf/', {
+            withCredentials: true,
+          });
+          csrfToken = csrfResponse.data.csrf_token;
+          
+          if (import.meta.env.DEV) {
+            console.log('🔑 Token CSRF obtenido del servidor:', csrfToken ? 'Token obtenido' : 'Sin token');
+          }
+        } catch (error) {
+          console.warn('⚠️ No se pudo obtener el token CSRF del servidor:', error);
+        }
+      }
+      
+      if (csrfToken) {
+        config.headers['X-CSRFToken'] = csrfToken;
+      }
+    }
+    
     // Log para desarrollo (solo en modo desarrollo)
     if (import.meta.env.DEV) {
       console.log('🚀 API Request:', {
         method: config.method?.toUpperCase(),
         url: config.url,
         data: config.data,
+        headers: {
+          Authorization: config.headers.Authorization ? 'Bearer ***' : 'None',
+          'X-CSRFToken': config.headers['X-CSRFToken'] ? '***' : 'None',
+        },
+      });
+      
+      // 🔍 DEBUG TEMPORAL: Mostrar token completo para depuración
+      console.log('🔍 DEBUG TOKEN:', {
+        tokenFromStorage: localStorage.getItem('accessToken'),
+        authHeader: config.headers.Authorization,
       });
     }
     
@@ -116,6 +169,20 @@ export interface ApiError {
   errors?: Record<string, string[]>;
   status: number;
 }
+
+// 🔐 FUNCIÓN PARA OBTENER TOKEN CSRF
+export const getCSRFTokenFromServer = async (): Promise<string> => {
+  try {
+    // Hacer una petición GET para obtener el token CSRF usando axios básico (sin interceptores)
+    const response = await axios.get('http://localhost:8000/api/users/auth/csrf/', {
+      withCredentials: true,
+    });
+    return response.data.csrf_token;
+  } catch (error) {
+    console.warn('⚠️ No se pudo obtener el token CSRF:', error);
+    throw error;
+  }
+};
 
 // 🚀 FUNCIONES HELPER para operaciones comunes
 export const apiHelpers = {

@@ -35,7 +35,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const getItemStyle = (isActive: boolean) => {
     if (isActive) {
       return {
-        background: 'linear-gradient(135deg, rgba(0, 206, 209, 1) 0%, rgba(0, 150, 199, 1) 100%)'
+        background: 'var(--primary)',
+        backgroundColor: 'var(--primary)'
       };
     }
     return {};
@@ -159,7 +160,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                       : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                   style={active ? {
-                    background: 'linear-gradient(135deg, rgba(0, 206, 209, 1) 0%, rgba(0, 150, 199, 1) 100%)'
+                    background: 'var(--primary)',
+                    backgroundColor: 'var(--primary)'
                   } : {}}
                 >
                   <span 

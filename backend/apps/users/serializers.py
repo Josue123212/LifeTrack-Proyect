@@ -8,7 +8,7 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
 from django.utils import timezone
-from .models import User, PasswordResetToken
+from .models import User, PasswordResetToken, SecretaryProfile
 
 
 class CustomTokenObtainPairSerializer(serializers.Serializer):
@@ -33,20 +33,52 @@ class CustomTokenObtainPairSerializer(serializers.Serializer):
                 print(f"Intentando autenticar: {email_or_username}")
                 print(f"Request en context: {self.context.get('request')}")
                 
-                # Usar el backend personalizado que maneja email o username
-                user = authenticate(
-                    request=self.context.get('request'),
-                    username=email_or_username,
-                    password=password
-                )
+                # 🔍 Primero verificar si el usuario existe con esas credenciales
+                from django.contrib.auth import get_user_model
+                from django.contrib.auth.hashers import check_password
                 
-                print(f"Resultado de authenticate: {user}")
+                User = get_user_model()
+                user = None
+                
+                # Buscar usuario por email o username
+                try:
+                    if '@' in email_or_username:
+                        user_candidate = User.objects.get(email=email_or_username)
+                    else:
+                        user_candidate = User.objects.get(username=email_or_username)
+                    
+                    # Verificar contraseña
+                    if check_password(password, user_candidate.password):
+                        user = user_candidate
+                        print(f"✅ Credenciales válidas para: {user.email}")
+                    else:
+                        print(f"❌ Contraseña incorrecta para: {email_or_username}")
+                        
+                except User.DoesNotExist:
+                    print(f"❌ Usuario no encontrado: {email_or_username}")
+                
+                print(f"Resultado de validación: {user}")
                 
                 if user:
+                    # ✅ Credenciales válidas - ahora validar estados
                     if not user.is_active:
                         raise serializers.ValidationError(
                             'La cuenta de usuario está desactivada.'
                         )
+                    
+                    # 🔒 Validar si es un doctor y si puede acceder al sistema
+                    if user.role == 'doctor':
+                        try:
+                            from apps.doctors.models import Doctor
+                            doctor = Doctor.objects.get(user=user)
+                            if not doctor.can_access_system:
+                                raise serializers.ValidationError(
+                                    'Cuenta deshabilitada: Su acceso como doctor ha sido suspendido. Contacte al administrador del sistema.'
+                                )
+                        except Doctor.DoesNotExist:
+                            raise serializers.ValidationError(
+                                'No se encontró el perfil de doctor asociado.'
+                            )
                     
                     print("Debug - Generando tokens...")
                     # Generar tokens manualmente
@@ -88,17 +120,120 @@ class CustomTokenObtainPairSerializer(serializers.Serializer):
                     return data
                 else:
                     raise serializers.ValidationError(
-                        'No se pudo autenticar con las credenciales proporcionadas.'
+                        'Credenciales inválidas. Verifique su email/usuario y contraseña.'
                     )
             else:
                 raise serializers.ValidationError(
-                    'Debe incluir email/username y contraseña.'
+                    'Debe proporcionar email/usuario y contraseña.'
                 )
         except Exception as e:
-            print(f"Debug - Excepción en validate: {type(e).__name__}: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            raise
+            print(f"❌ Error en validación: {str(e)}")
+            raise serializers.ValidationError(
+                'Error en la autenticación. Intente nuevamente.'
+            )
+
+
+class SecretaryCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer para crear nuevas secretarias junto con su usuario.
+    Maneja la creación completa de usuario y secretaria en una sola operación.
+    """
+    # Campos del usuario
+    username = serializers.CharField(write_only=True)
+    email = serializers.EmailField(write_only=True)
+    first_name = serializers.CharField(write_only=True)
+    last_name = serializers.CharField(write_only=True)
+    phone_number = serializers.CharField(write_only=True, required=False)  # Cambiado de 'phone' a 'phone_number'
+    password = serializers.CharField(write_only=True)
+    
+    # Campos del perfil de secretaria
+    employee_id = serializers.CharField(required=False)
+    department = serializers.CharField(default='Administración')
+    shift_start = serializers.TimeField(default='08:00')
+    shift_end = serializers.TimeField(default='17:00')
+    hire_date = serializers.DateField(required=False)  # Nuevo campo
+    can_manage_appointments = serializers.BooleanField(default=True)
+    can_manage_patients = serializers.BooleanField(default=True)
+    can_view_reports = serializers.BooleanField(default=False)  # Nuevo campo
+    
+    class Meta:
+        model = SecretaryProfile
+        fields = [
+            # Campos del usuario
+            'username', 'email', 'first_name', 'last_name', 'phone_number', 'password',
+            # Campos del perfil de secretaria
+            'employee_id', 'department', 'shift_start', 'shift_end', 'hire_date',
+            'can_manage_appointments', 'can_manage_patients', 'can_view_reports'
+        ]
+
+    def validate_username(self, value):
+        """
+        Valida que el username sea único.
+        """
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError(
+                "Ya existe un usuario con este nombre de usuario."
+            )
+        return value
+
+    def validate_email(self, value):
+        """
+        Valida que el email sea único.
+        """
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError(
+                "Ya existe un usuario con este correo electrónico."
+            )
+        return value
+
+    def validate_employee_id(self, value):
+        """
+        Valida que el employee_id sea único si se proporciona.
+        """
+        if value and SecretaryProfile.objects.filter(employee_id=value).exists():
+            raise serializers.ValidationError(
+                "Ya existe un secretario con este ID de empleado."
+            )
+        return value
+
+    def create(self, validated_data):
+        """
+        Crea un nuevo usuario con rol de secretaria y su perfil asociado.
+        """
+        # Extraer datos del usuario
+        user_data = {
+            'username': validated_data.pop('username'),
+            'email': validated_data.pop('email'),
+            'first_name': validated_data.pop('first_name'),
+            'last_name': validated_data.pop('last_name'),
+            'phone': validated_data.pop('phone_number', ''),  # Mapear phone_number a phone
+            'password': validated_data.pop('password'),
+            'role': 'secretary'
+        }
+        
+        # Crear el usuario (esto automáticamente crea el SecretaryProfile via signal)
+        user = User.objects.create_user(**user_data)
+        
+        # Obtener el perfil de secretaria creado automáticamente por el signal
+        secretary_profile = SecretaryProfile.objects.get(user=user)
+        
+        # Generar employee_id si no se proporciona
+        if not validated_data.get('employee_id'):
+            validated_data['employee_id'] = f"SEC{user.id:04d}"
+        
+        # Actualizar el perfil de secretaria con los datos adicionales
+        for field, value in validated_data.items():
+            setattr(secretary_profile, field, value)
+        
+        secretary_profile.save()
+        
+        return secretary_profile
+
+    def to_representation(self, instance):
+        """
+        Retorna la representación del perfil de secretaria creado.
+        """
+        return SecretaryProfileSerializer(instance).data
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -180,6 +315,7 @@ class UserSerializer(serializers.ModelSerializer):
     is_client = serializers.BooleanField(read_only=True)
     is_admin = serializers.BooleanField(read_only=True)
     is_superadmin = serializers.BooleanField(read_only=True)
+    patient_profile_id = serializers.SerializerMethodField()
     
     class Meta:
         model = User
@@ -187,12 +323,68 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'first_name', 'last_name', 'full_name',
             'phone', 'role', 'date_of_birth', 'address', 'is_active',
             'is_staff', 'is_superuser', 'created_at', 'updated_at',
-            'is_doctor', 'is_secretary', 'is_client', 'is_admin', 'is_superadmin'
+            'is_doctor', 'is_secretary', 'is_client', 'is_admin', 'is_superadmin',
+            'patient_profile_id'
         )
         read_only_fields = (
             'id', 'username', 'is_staff', 'is_superuser', 'created_at', 'updated_at',
-            'is_doctor', 'is_secretary', 'is_client', 'is_admin', 'is_superadmin'
+            'is_doctor', 'is_secretary', 'is_client', 'is_admin', 'is_superadmin',
+            'patient_profile_id'
         )
+    
+    def get_patient_profile_id(self, obj):
+        """
+        Obtener el ID del perfil de paciente si existe.
+        """
+        if hasattr(obj, 'patient_profile'):
+            return obj.patient_profile.id
+        return None
+    
+    def to_representation(self, instance):
+        """
+        Incluir datos del perfil de paciente en la representación.
+        """
+        data = super().to_representation(instance)
+        
+        # Si el usuario tiene perfil de paciente, incluir sus datos
+        if hasattr(instance, 'patient_profile') and instance.patient_profile:
+            patient_profile = instance.patient_profile
+            data['allergies'] = patient_profile.allergies or ''
+            data['medical_conditions'] = patient_profile.medical_conditions or ''
+            data['emergency_contact'] = patient_profile.emergency_contact_name or ''
+        else:
+            data['allergies'] = ''
+            data['medical_conditions'] = ''
+            data['emergency_contact'] = ''
+            
+        return data
+    
+    def update(self, instance, validated_data):
+        """
+        Actualizar el usuario y su perfil de paciente.
+        """
+        # Extraer campos del perfil de paciente
+        allergies = validated_data.pop('allergies', None)
+        medical_conditions = validated_data.pop('medical_conditions', None)
+        emergency_contact = validated_data.pop('emergency_contact', None)
+        
+        # Actualizar campos del usuario
+        instance = super().update(instance, validated_data)
+        
+        # Actualizar perfil de paciente si existe
+        if hasattr(instance, 'patient_profile') and instance.patient_profile:
+            patient_profile = instance.patient_profile
+            
+            if allergies is not None:
+                patient_profile.allergies = allergies
+            if medical_conditions is not None:
+                patient_profile.medical_conditions = medical_conditions
+            if emergency_contact is not None:
+                patient_profile.emergency_contact_name = emergency_contact
+                
+            patient_profile.save()
+        
+        return instance
     
     def validate_role(self, value):
         """
@@ -211,14 +403,29 @@ class UserProfileSerializer(serializers.ModelSerializer):
     Serializer para actualizar el perfil del usuario.
     """
     full_name = serializers.CharField(source='get_full_name', read_only=True)
+    patient_profile_id = serializers.SerializerMethodField()
+    
+    # Campos del perfil de paciente
+    allergies = serializers.CharField(required=False, allow_blank=True)
+    medical_conditions = serializers.CharField(required=False, allow_blank=True)
+    emergency_contact = serializers.CharField(required=False, allow_blank=True)
     
     class Meta:
         model = User
         fields = (
             'id', 'username', 'email', 'first_name', 'last_name', 'full_name',
-            'phone', 'date_of_birth', 'address', 'created_at', 'updated_at'
+            'phone', 'role', 'date_of_birth', 'address', 'created_at', 'updated_at',
+            'patient_profile_id', 'allergies', 'medical_conditions', 'emergency_contact'
         )
-        read_only_fields = ('id', 'username', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'username', 'role', 'created_at', 'updated_at', 'patient_profile_id')
+    
+    def get_patient_profile_id(self, obj):
+        """
+        Obtener el ID del perfil de paciente si existe.
+        """
+        if hasattr(obj, 'patient_profile'):
+            return obj.patient_profile.id
+        return None
     
     def validate_email(self, value):
         """
@@ -230,6 +437,65 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 'Ya existe un usuario con este email.'
             )
         return value
+    
+    def to_representation(self, instance):
+        """
+        Incluir datos del perfil de paciente en la representación.
+        """
+        data = super().to_representation(instance)
+        
+        # Agregar campos del perfil de paciente si existe
+        if hasattr(instance, 'patient_profile') and instance.patient_profile:
+            patient_profile = instance.patient_profile
+            data['allergies'] = patient_profile.allergies or ''
+            data['medical_conditions'] = patient_profile.medical_conditions or ''
+            data['emergency_contact'] = patient_profile.emergency_contact_name or ''
+        else:
+            data['allergies'] = ''
+            data['medical_conditions'] = ''
+            data['emergency_contact'] = ''
+            
+        return data
+    
+    def update(self, instance, validated_data):
+        """
+        Actualizar el usuario y su perfil de paciente.
+        """
+        print(f"🔍 UserProfileSerializer.update - Datos recibidos: {validated_data}")
+        
+        # Extraer campos del perfil de paciente
+        allergies = validated_data.pop('allergies', None)
+        medical_conditions = validated_data.pop('medical_conditions', None)
+        emergency_contact = validated_data.pop('emergency_contact', None)
+        
+        print(f"🔍 Campos médicos extraídos - allergies: {allergies}, medical_conditions: {medical_conditions}, emergency_contact: {emergency_contact}")
+        
+        # Actualizar campos del usuario
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Actualizar perfil de paciente si existe
+        if hasattr(instance, 'patient_profile') and instance.patient_profile:
+            patient_profile = instance.patient_profile
+            print(f"🔍 Perfil de paciente encontrado: {patient_profile.id}")
+            
+            if allergies is not None:
+                patient_profile.allergies = allergies
+                print(f"🔍 Actualizando allergies: {allergies}")
+            if medical_conditions is not None:
+                patient_profile.medical_conditions = medical_conditions
+                print(f"🔍 Actualizando medical_conditions: {medical_conditions}")
+            if emergency_contact is not None:
+                patient_profile.emergency_contact_name = emergency_contact
+                print(f"🔍 Actualizando emergency_contact_name: {emergency_contact}")
+                
+            patient_profile.save()
+            print(f"🔍 Perfil de paciente guardado")
+        else:
+            print(f"🔍 No se encontró perfil de paciente para el usuario {instance.id}")
+        
+        return instance
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -463,6 +729,12 @@ class SecretaryProfileSerializer(serializers.ModelSerializer):
     is_working_now = serializers.SerializerMethodField()
     permissions_summary = serializers.CharField(source='get_permissions_summary', read_only=True)
     
+    # Campos del User para permitir actualizaciones
+    first_name = serializers.CharField(write_only=True, required=False)
+    last_name = serializers.CharField(write_only=True, required=False)
+    email = serializers.EmailField(write_only=True, required=False)
+    phone_number = serializers.CharField(write_only=True, required=False)
+    
     class Meta:
         from .models import SecretaryProfile
         model = SecretaryProfile
@@ -478,9 +750,16 @@ class SecretaryProfileSerializer(serializers.ModelSerializer):
             'is_working_now',
             'can_manage_appointments',
             'can_manage_patients',
+            'can_view_reports',
+            'hire_date',
             'permissions_summary',
             'created_at',
-            'updated_at'
+            'updated_at',
+            # Campos del User para permitir actualizaciones
+            'first_name',
+            'last_name',
+            'email',
+            'phone_number'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'full_name', 'shift_duration', 'is_working_now', 'permissions_summary']
 
@@ -535,6 +814,61 @@ class SecretaryProfileSerializer(serializers.ModelSerializer):
         """
         attrs = self.validate_shift_times(attrs)
         return attrs
+
+    def update(self, instance, validated_data):
+        """
+        Actualizar tanto el perfil de secretaria como los datos del usuario relacionado.
+        """
+        print("=" * 80)
+        print("🚨 MÉTODO UPDATE EJECUTÁNDOSE EN SecretaryProfileSerializer")
+        print("=" * 80)
+        print(f"🔍 SecretaryProfileSerializer.update - Datos recibidos: {validated_data}")
+        print(f"🔍 Instance: {instance} (ID: {instance.id})")
+        print("=" * 80)
+        
+        # Extraer campos que pertenecen al modelo User
+        user_fields = {}
+        secretary_fields = {}
+        
+        # Mapear campos del frontend al backend
+        field_mapping = {
+            'first_name': 'first_name',
+            'last_name': 'last_name', 
+            'email': 'email',
+            'phone_number': 'phone',  # Mapear phone_number a phone
+            'phone': 'phone'  # También aceptar phone directamente
+        }
+        
+        for field_name, value in validated_data.items():
+            if field_name in field_mapping:
+                # Es un campo del User
+                mapped_field = field_mapping[field_name]
+                user_fields[mapped_field] = value
+                print(f"🔍 Campo de User: {field_name} -> {mapped_field} = {value}")
+            else:
+                # Es un campo del SecretaryProfile
+                secretary_fields[field_name] = value
+                print(f"🔍 Campo de SecretaryProfile: {field_name} = {value}")
+        
+        # Actualizar campos del usuario relacionado
+        if user_fields:
+            user = instance.user
+            print(f"🔍 Actualizando User {user.id} con: {user_fields}")
+            for attr, value in user_fields.items():
+                setattr(user, attr, value)
+            user.save()
+            print(f"✅ Usuario actualizado: {user.first_name} {user.last_name}")
+        
+        # Actualizar campos del perfil de secretaria
+        if secretary_fields:
+            print(f"🔍 Actualizando SecretaryProfile {instance.id} con: {secretary_fields}")
+            for attr, value in secretary_fields.items():
+                setattr(instance, attr, value)
+        
+        instance.save()
+        print(f"✅ Perfil de secretaria actualizado")
+        
+        return instance
 
     def to_representation(self, instance):
         """

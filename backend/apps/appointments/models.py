@@ -147,6 +147,85 @@ class Appointment(models.Model):
         """
         return self.status == 'scheduled'
     
+    def can_be_confirmed(self):
+        """
+        Determina si la cita puede ser confirmada.
+        Solo se pueden confirmar citas programadas.
+        """
+        return self.status == 'scheduled'
+    
+    def can_be_completed(self):
+        """
+        Determina si la cita puede ser marcada como completada.
+        Solo se pueden completar citas confirmadas.
+        """
+        return self.status == 'confirmed'
+    
+    def confirm(self):
+        """
+        Confirma la cita.
+        
+        Raises:
+            ValidationError: Si la cita no puede ser confirmada
+        """
+        if not self.can_be_confirmed():
+            raise ValidationError(
+                f'No se puede confirmar una cita {self.get_status_display().lower()}'
+            )
+        
+        self.status = 'confirmed'
+        self.save(update_fields=['status', 'updated_at'])
+    
+    def complete(self, notes=None):
+        """
+        Marca la cita como completada.
+        
+        Args:
+            notes (str, optional): Notas adicionales sobre la cita completada
+            
+        Raises:
+            ValidationError: Si la cita no puede ser completada
+        """
+        if not self.can_be_completed():
+            raise ValidationError(
+                f'No se puede completar una cita {self.get_status_display().lower()}'
+            )
+        
+        self.status = 'completed'
+        if notes:
+            # Agregar las notas de completación
+            completion_note = f"COMPLETADA: {notes}"
+            if self.notes:
+                self.notes = f"{self.notes}\n\n{completion_note}"
+            else:
+                self.notes = completion_note
+        self.save(update_fields=['status', 'notes', 'updated_at'])
+    
+    def cancel(self, reason=None):
+        """
+        Cancela la cita.
+        
+        Args:
+            reason (str, optional): Razón de la cancelación
+            
+        Raises:
+            ValidationError: Si la cita no puede ser cancelada
+        """
+        if not self.can_be_cancelled():
+            raise ValidationError(
+                f'No se puede cancelar una cita {self.get_status_display().lower()}'
+            )
+        
+        self.status = 'cancelled'
+        if reason:
+            # Agregar la razón de cancelación a las notas
+            cancellation_note = f"CANCELADA: {reason}"
+            if self.notes:
+                self.notes = f"{self.notes}\n\n{cancellation_note}"
+            else:
+                self.notes = cancellation_note
+        self.save(update_fields=['status', 'notes', 'updated_at'])
+    
     @property
     def is_today(self):
         """

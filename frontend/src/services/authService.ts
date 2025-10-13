@@ -1,6 +1,6 @@
 // 🔐 Servicio de Autenticación
 
-import api from './api';
+import api, { getCSRFTokenFromServer } from './api';
 import type {
   User,
   LoginData,
@@ -28,6 +28,18 @@ interface ApiError {
  */
 export const authService = {
   /**
+   * Inicializar token CSRF
+   */
+  initializeCSRF: async (): Promise<void> => {
+    try {
+      const csrfToken = await getCSRFTokenFromServer();
+      console.log('✅ Token CSRF inicializado correctamente:', csrfToken ? 'Token obtenido' : 'Sin token');
+    } catch (error) {
+      console.error('❌ Error al inicializar token CSRF:', error);
+      throw error;
+    }
+  },
+  /**
    * Iniciar sesión
    */
   login: async (loginData: LoginData): Promise<AuthResponse> => {
@@ -47,14 +59,15 @@ export const authService = {
         user: {
           id: backendData.user.id.toString(),
           email: backendData.user.email,
-          firstName: backendData.user.first_name || backendData.user.email.split('@')[0],
+          firstName: backendData.user.first_name || (backendData.user.email && typeof backendData.user.email === 'string' && backendData.user.email.includes('@') ? backendData.user.email.split('@')[0] : '') || 'Usuario',
           lastName: backendData.user.last_name || '',
           phone: backendData.user.phone || '',
           role: backendData.user.role || 'client',
           isActive: backendData.user.is_active || true,
           dateJoined: backendData.user.date_joined || new Date().toISOString(),
           lastLogin: backendData.user.last_login || undefined,
-          avatar: backendData.user.avatar || undefined
+          avatar: backendData.user.avatar || undefined,
+          patient_profile_id: backendData.user.patient_profile_id || undefined // ¡CAMPO AGREGADO!
         },
         accessToken: backendData.access,
         refreshToken: backendData.refresh,
@@ -66,10 +79,47 @@ export const authService = {
       console.error('Error response:', apiError.response);
       console.error('Error data:', apiError.response?.data);
       
-      const errorMessage = apiError.response?.data?.error || 
-                          apiError.response?.data?.message || 
-                          apiError.message || 
-                          'Error al iniciar sesión';
+      // 🔍 Extraer mensaje de error desde diferentes formatos del backend
+      let errorMessage = 'Error al iniciar sesión';
+      
+      if (apiError.response?.data) {
+        const data = apiError.response.data;
+        
+        // 1. PRIORIDAD: Formato Django REST Framework: non_field_errors
+        if (data.non_field_errors && Array.isArray(data.non_field_errors) && data.non_field_errors.length > 0) {
+          errorMessage = data.non_field_errors[0];
+        }
+        // 2. Parsear detail si contiene non_field_errors como string
+        else if (data.detail && typeof data.detail === 'string' && data.detail.includes('non_field_errors')) {
+          try {
+            // Extraer el mensaje del string detail
+            const match = data.detail.match(/string='([^']+)'/);
+            if (match && match[1]) {
+              errorMessage = match[1];
+            } else {
+              errorMessage = data.detail;
+            }
+          } catch (e) {
+            errorMessage = data.detail;
+          }
+        }
+        // 3. Formato personalizado: message
+        else if (data.message) {
+          errorMessage = data.message;
+        }
+        // 4. Formato de campo específico: detail
+        else if (data.detail) {
+          errorMessage = data.detail;
+        }
+        // 5. ÚLTIMO RECURSO: error (puede ser genérico)
+        else if (data.error) {
+          errorMessage = data.error;
+        }
+      }
+      // Fallback al mensaje del error
+      else if (apiError.message) {
+        errorMessage = apiError.message;
+      }
       
       throw new Error(errorMessage);
     }
@@ -106,9 +156,8 @@ export const authService = {
       return {
         user: {
           id: backendResponse.user.id,
-          username: backendResponse.user.username,
           email: backendResponse.user.email,
-          firstName: backendResponse.user.first_name,
+          firstName: backendResponse.user.first_name || 'Usuario',
           lastName: backendResponse.user.last_name,
           phone: backendResponse.user.phone || '',
           role: backendResponse.user.role || 'client',
@@ -168,11 +217,36 @@ export const authService = {
    */
   getProfile: async (): Promise<User> => {
     try {
-      const response = await api.get<User>('/users/profile/');
-      return response.data;
+      const response = await api.get('/users/profile/');
+      const backendData = response.data;
+      
+
+      
+      // Mapear la respuesta del backend al formato esperado por el frontend
+      const mappedUser = {
+        id: backendData.id?.toString() || backendData.user?.id?.toString(),
+        email: backendData.email || backendData.user?.email,
+        firstName: backendData.first_name || backendData.user?.first_name || (backendData.email && typeof backendData.email === 'string' && backendData.email.includes('@') ? backendData.email.split('@')[0] : '') || 'Usuario',
+        lastName: backendData.last_name || backendData.user?.last_name || '',
+        phone: backendData.phone || backendData.user?.phone || '',
+        role: backendData.role || backendData.user?.role || 'client',
+        isActive: backendData.is_active !== undefined ? backendData.is_active : (backendData.user?.is_active || true),
+        dateJoined: backendData.date_joined || backendData.user?.date_joined || new Date().toISOString(),
+        lastLogin: backendData.last_login || backendData.user?.last_login || undefined,
+        avatar: backendData.avatar || backendData.user?.avatar || undefined,
+        address: backendData.address || backendData.user?.address || undefined,
+        emergencyContact: backendData.emergency_contact || backendData.user?.emergency_contact || undefined,
+        allergies: backendData.allergies || '',
+        medicalConditions: backendData.medical_conditions || '',
+        patient_profile_id: backendData.patient_profile_id || backendData.user?.patient_profile_id || undefined
+      };
+      
+      
+      
+      return mappedUser;
     } catch (error: unknown) {
       const apiError = error as ApiError;
-      console.error('Error en authService.getCurrentUser:', apiError);
+      console.error('Error en authService.getProfile:', apiError);
       throw new Error('Error al obtener usuario actual');
     }
   },
@@ -182,12 +256,49 @@ export const authService = {
    */
   updateProfile: async (profileData: UpdateProfileData): Promise<User> => {
     try {
-      const response = await api.patch<User>('/users/profile/', profileData);
-      return response.data;
-    } catch (error: unknown) {
-      const apiError = error as ApiError;
-      console.error('Error en authService.updateProfile:', apiError);
-      throw new Error('Error al actualizar perfil');
+      console.log('🔍 authService.updateProfile - Datos enviados:', profileData);
+      
+      // Mapear datos del frontend al formato del backend
+      const backendData: Record<string, any> = {
+        first_name: profileData.firstName || '',
+        last_name: profileData.lastName || '',
+        phone: profileData.phone || '',
+        address: profileData.address || '',
+        avatar: profileData.avatar,
+        emergency_contact: profileData.emergencyContact || '',
+        allergies: profileData.allergies || '',
+        medical_conditions: profileData.medicalConditions || ''
+      };
+      
+      const response = await api.patch('/users/profile/', backendData);
+      
+      // La respuesta tiene formato { message: string, user: {...} }
+      const userData = response.data.user;
+      
+      // Mapear la respuesta del backend al formato del frontend
+      const mappedUser: User = {
+        id: userData.id,
+        email: userData.email,
+        firstName: userData.first_name || '',
+        lastName: userData.last_name || '',
+        phone: userData.phone || '',
+        role: userData.role || '',
+        isActive: userData.is_active,
+        dateJoined: userData.date_joined,
+        lastLogin: userData.last_login,
+        avatar: userData.avatar || '',
+        address: userData.address || '',
+        emergencyContact: userData.emergency_contact || '',
+        allergies: userData.allergies || '',
+        medicalConditions: userData.medical_conditions || '',
+        patientProfileId: userData.patient_profile_id
+      };
+      
+      console.log('🔍 authService.updateProfile - Usuario mapeado:', mappedUser);
+      return mappedUser;
+    } catch (error) {
+      console.error('❌ Error al actualizar perfil:', error);
+      throw error;
     }
   },
 
@@ -238,9 +349,18 @@ export const authService = {
    */
   verifyToken: async (token: string): Promise<boolean> => {
     try {
-      await api.post('/users/auth/verify-token/', { token });
+      // Verificar que el token no sea nulo o vacío
+      if (!token || token.trim() === '') {
+        console.log('⚠️ Token vacío o nulo, no se puede verificar');
+        return false;
+      }
+      
+      console.log('🔍 Verificando token...');
+      await api.post('/users/auth/verify/', { token });
+      console.log('✅ Token verificado exitosamente');
       return true;
-    } catch (error) {
+    } catch (error: any) {
+      console.log('❌ Token inválido:', error.response?.data?.detail || error.message);
       return false;
     }
   },
@@ -270,6 +390,19 @@ export const authService = {
         success: false,
         error: apiError.response?.data?.error || apiError.message || 'Error en autenticación con Google'
       };
+    }
+  },
+
+  /**
+   * Verificar el estado de autenticación
+   */
+  checkAuth: async (): Promise<User | null> => {
+    try {
+      const response = await api.get('/users/auth/me/');
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error al verificar autenticación:', error);
+      return null;
     }
   }
 };

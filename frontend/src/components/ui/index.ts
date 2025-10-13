@@ -44,8 +44,43 @@ export type {
   ConfirmModalProps 
 } from './Modal';
 
+// Tabs Components
+export { 
+  Tabs, 
+  TabsList, 
+  TabsTrigger, 
+  TabsContent, 
+  tabsVariants 
+} from './Tabs';
+
+// Label Component
+export { Label, labelVariants } from './Label';
+export type { LabelProps } from './Label';
+
+// Textarea Component
+export { Textarea, textareaVariants } from './Textarea';
+export type { TextareaProps } from './Textarea';
+
+// Select Components
+export { 
+  Select, 
+  SelectTrigger, 
+  SelectValue, 
+  SelectContent, 
+  SelectItem, 
+  selectVariants 
+} from './Select';
+export type { 
+  SelectProps, 
+  SelectTriggerProps, 
+  SelectContentProps, 
+  SelectItemProps, 
+  SelectValueProps 
+} from './Select';
+
 // Re-exportar componentes por defecto para facilitar importaciones
 export { default as ButtonComponent } from './Button';
 export { default as InputComponent } from './Input';
 export { default as CardComponent } from './Card';
 export { default as ModalComponent } from './Modal';
+export { default as TabsComponent } from './Tabs';

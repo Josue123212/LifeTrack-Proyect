@@ -27,7 +27,7 @@ import { appointmentService } from '../../services/appointmentService';
 
 // 📋 Schema de validación con Zod
 const appointmentSchema = z.object({
-  patient: z.number().min(1, 'Selecciona un paciente'),
+  patient: z.number().optional(),
   doctor: z.number().min(1, 'Selecciona un doctor'),
   date: z.string().min(1, 'Selecciona una fecha'),
   time: z.string().min(1, 'Selecciona una hora'),
@@ -66,6 +66,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     appointment?.date || ''
   );
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [weekendAlert, setWeekendAlert] = useState<string>('');
 
   // 📝 Configuración del formulario
   const {
@@ -107,7 +108,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
             selectedDoctor, 
             selectedDate
           );
-          setAvailableSlots(slots.available_slots);
+          setAvailableSlots(slots.data.available_slots.map(slot => slot.time));
         } catch (error) {
           console.error('Error loading available slots:', error);
           setAvailableSlots([]);
@@ -138,13 +139,50 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     return new Date().toISOString().split('T')[0];
   };
 
+  // 🚫 Validar si la fecha es fin de semana
+  const isWeekend = (dateString: string): boolean => {
+    if (!dateString) return false;
+    const date = new Date(dateString);
+    const dayOfWeek = date.getDay(); // 0 = domingo, 6 = sábado
+    return dayOfWeek === 0 || dayOfWeek === 6;
+  };
+
+  // 🔍 Efecto para validar fines de semana
+  useEffect(() => {
+    if (watchedDate) {
+      if (isWeekend(watchedDate)) {
+        setWeekendAlert('⚠️ Las citas solo pueden programarse de lunes a viernes. Por favor, selecciona un día de la semana.');
+      } else {
+        setWeekendAlert('');
+      }
+    } else {
+      setWeekendAlert('');
+    }
+  }, [watchedDate]);
+
   // 📝 Manejar envío del formulario
   const onFormSubmit = (data: AppointmentFormData) => {
+    console.log('🔍 DEBUG - Datos del formulario:', data);
+    console.log('🔍 DEBUG - preselectedPatient:', preselectedPatient);
+    console.log('🔍 DEBUG - data.patient:', data.patient);
+    
+    // Validar que tenemos un paciente válido
+    if (!preselectedPatient) {
+      console.error('❌ No hay preselectedPatient disponible');
+      // Mostrar error al usuario
+      const errorMessage = 'No se pudo identificar tu perfil de paciente. Por favor, contacta al administrador.';
+      console.error(errorMessage);
+      return;
+    }
+    
     const formattedData = {
       ...data,
+      patient: preselectedPatient,
       time: data.time.length === 5 ? `${data.time}:00` : data.time
     };
-
+    
+    console.log('🔍 DEBUG - Datos formateados a enviar:', formattedData);
+    
     onSubmit(formattedData);
   };
 
@@ -168,40 +206,50 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
       </CardHeader>
 
       <CardContent>
+        {/* 📋 Información de horarios */}
+        <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--info-light)', border: '1px solid var(--info)' }}>
+          <div className="flex items-start space-x-2">
+            <div className="text-sm" style={{ color: 'var(--info)' }}>
+              <strong>📅 Horarios de Atención:</strong> Las citas están disponibles de lunes a viernes. 
+              Los fines de semana no están disponibles para programar citas médicas.
+            </div>
+          </div>
+        </div>
         <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
           {/* ⚠️ Error general */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-700 text-sm">{error}</p>
+            <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--error-light)', border: '1px solid var(--error)' }}>
+              <p className="text-sm" style={{ color: 'var(--error)' }}>{error}</p>
             </div>
           )}
 
           {/* 👨‍⚕️ Selección de Doctor */}
           <div className="space-y-2">
-            <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+            <label className="flex items-center space-x-2 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
               <UserIcon className="h-4 w-4" />
               <span>Doctor</span>
             </label>
             <select
               {...register('doctor', { valueAsNumber: true })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 rounded-lg focus:ring-2 focus:border-transparent"
+              style={{ border: '1px solid var(--border)', '--tw-ring-color': 'var(--primary)' } as React.CSSProperties}
               disabled={loading || doctorsLoading}
             >
               <option value={0}>Selecciona un doctor</option>
               {doctorsData?.results.map((doctor) => (
                 <option key={doctor.id} value={doctor.id}>
-                  Dr. {doctor.user.firstName} {doctor.user.lastName} - {doctor.specialization}
+                  {doctor.full_name} - {doctor.specialization}
                 </option>
               ))}
             </select>
             {errors.doctor && (
-              <p className="text-red-600 text-sm">{errors.doctor.message}</p>
+              <p className="text-sm" style={{ color: 'var(--error)' }}>{errors.doctor.message}</p>
             )}
           </div>
 
           {/* 📅 Selección de Fecha */}
           <div className="space-y-2">
-            <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+            <label className="flex items-center space-x-2 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
               <CalendarIcon className="h-4 w-4" />
               <span>Fecha</span>
             </label>
@@ -213,20 +261,28 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               className="w-full"
             />
             {errors.date && (
-              <p className="text-red-600 text-sm">{errors.date.message}</p>
+              <p className="text-sm" style={{ color: 'var(--error)' }}>{errors.date.message}</p>
+            )}
+            {weekendAlert && (
+              <div className="flex items-start space-x-2 p-3 rounded-lg" style={{ backgroundColor: 'var(--warning-light)', border: '1px solid var(--warning)' }}>
+                <div className="text-sm" style={{ color: 'var(--warning)' }}>
+                  {weekendAlert}
+                </div>
+              </div>
             )}
           </div>
 
           {/* 🕐 Selección de Hora */}
           <div className="space-y-2">
-            <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+            <label className="flex items-center space-x-2 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
               <ClockIcon className="h-4 w-4" />
               <span>Hora</span>
             </label>
             {availableSlots.length > 0 ? (
               <select
                 {...register('time')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 rounded-lg focus:ring-2 focus:border-transparent"
+                style={{ border: '1px solid var(--border)', '--tw-ring-color': 'var(--primary)' } as React.CSSProperties}
                 disabled={loading}
               >
                 <option value="">Selecciona una hora</option>
@@ -239,24 +295,35 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                   </option>
                 ))}
               </select>
-            ) : selectedDoctor && selectedDate ? (
-              <div className="flex items-center justify-center py-8 text-gray-500">
-                <LoadingSpinner size="sm" />
-                <span className="ml-2">Cargando horarios disponibles...</span>
-              </div>
             ) : (
-              <div className="bg-gray-50 rounded-lg p-4 text-center text-gray-500">
-                Selecciona un doctor y fecha para ver horarios disponibles
+              <div className="space-y-2">
+                <Input
+                  type="time"
+                  {...register('time')}
+                  className="w-full"
+                  disabled={loading}
+                  placeholder="HH:MM"
+                />
+                {selectedDoctor && selectedDate && (
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    No hay horarios predefinidos disponibles. Puedes ingresar una hora manualmente.
+                  </p>
+                )}
+                {!selectedDoctor || !selectedDate ? (
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    Selecciona un doctor y fecha para ver horarios disponibles
+                  </p>
+                ) : null}
               </div>
             )}
             {errors.time && (
-              <p className="text-red-600 text-sm">{errors.time.message}</p>
+              <p className="text-sm" style={{ color: 'var(--error)' }}>{errors.time.message}</p>
             )}
           </div>
 
           {/* 📝 Motivo de la consulta */}
           <div className="space-y-2">
-            <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+            <label className="flex items-center space-x-2 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
               <DocumentTextIcon className="h-4 w-4" />
               <span>Motivo de la consulta</span>
             </label>
@@ -264,24 +331,26 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               {...register('reason')}
               rows={3}
               placeholder="Describe el motivo de la consulta..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="w-full px-3 py-2 rounded-lg focus:ring-2 focus:border-transparent resize-none"
+              style={{ border: '1px solid var(--border)', '--tw-ring-color': 'var(--primary)' } as React.CSSProperties}
               disabled={loading}
             />
             {errors.reason && (
-              <p className="text-red-600 text-sm">{errors.reason.message}</p>
+              <p className="text-sm" style={{ color: 'var(--error)' }}>{errors.reason.message}</p>
             )}
           </div>
 
           {/* 📋 Notas adicionales */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
               Notas adicionales (opcional)
             </label>
             <textarea
               {...register('notes')}
               rows={2}
               placeholder="Información adicional relevante..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="w-full px-3 py-2 rounded-lg focus:ring-2 focus:border-transparent resize-none"
+              style={{ border: '1px solid var(--border)', '--tw-ring-color': 'var(--primary)' } as React.CSSProperties}
               disabled={loading}
             />
           </div>
@@ -298,8 +367,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
             </Button>
             <Button
               type="submit"
-              disabled={loading || availableSlots.length === 0}
-              className="flex items-center space-x-2"
+              disabled={loading || !!weekendAlert}
+              className="w-full"
             >
               {loading && <LoadingSpinner size="sm" />}
               <span>

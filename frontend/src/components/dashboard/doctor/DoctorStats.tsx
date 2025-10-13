@@ -1,78 +1,85 @@
 import React from 'react';
-import { Calendar, Users, Clock, TrendingUp, Star } from 'lucide-react';
-import { StatsCard } from '../StatsCard';
-import type { DoctorDashboardData } from '../../../types';
+import { Calendar, Users, Clock, CheckCircle } from 'lucide-react';
 
 interface DoctorStatsProps {
-  stats?: DoctorDashboardData;
+  data?: any;
   isLoading?: boolean;
 }
 
-const DoctorStats: React.FC<DoctorStatsProps> = ({ stats, isLoading }) => {
+const DoctorStats: React.FC<DoctorStatsProps> = ({ data, isLoading }) => {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-background rounded-xl p-6 shadow-sm border-border animate-pulse">
-            <div className="h-4 bg-secondary-200 rounded w-3/4 mb-2"></div>
-            <div className="h-8 bg-secondary-200 rounded w-1/2 mb-2"></div>
-            <div className="h-3 bg-secondary-200 rounded w-full"></div>
+          <div key={i} className="bg-white rounded-lg shadow-md p-6 animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+            <div className="h-8 bg-gray-200 rounded w-1/2"></div>
           </div>
         ))}
       </div>
     );
   }
 
-  const statsData = [
+  // Usar datos reales del backend si están disponibles
+  const appointments = data?.appointments || {};
+  const patients = data?.patients || {};
+  
+  // Calcular porcentaje de completadas
+  const totalAppointments = appointments.total || 0;
+  const completedAppointments = appointments.completed || 0;
+  const completionRate = totalAppointments > 0 
+    ? Math.round((completedAppointments / totalAppointments) * 100)
+    : 0;
+
+  const stats = [
     {
       title: 'Citas Hoy',
-      value: stats?.metrics?.appointments_today?.value || 0,
+      value: appointments.today?.toString() || '0',
       icon: Calendar,
-      color: 'blue',
-      trend: stats?.metrics?.appointments_today?.change || 0,
-      description: stats?.metrics?.appointments_today?.period || 'vs ayer'
+      color: 'text-primary',
+      bgColor: 'bg-primary-light'
     },
     {
-      title: 'Pacientes Total',
-      value: stats?.metrics?.total_patients?.value || 0,
+      title: 'Pacientes Totales',
+      value: patients.total_unique?.toString() || '0',
       icon: Users,
-      color: 'green',
-      trend: stats?.metrics?.total_patients?.change || 0,
-      description: stats?.metrics?.total_patients?.period || 'vs mes anterior'
+      color: 'text-success',
+      bgColor: 'bg-green-50'
     },
     {
-      title: 'Citas Semana',
-      value: stats?.metrics?.appointments_this_week?.value || 0,
+      title: 'Citas Pendientes',
+      value: appointments.pending?.toString() || '0',
       icon: Clock,
-      color: 'purple',
-      trend: stats?.metrics?.appointments_this_week?.change || 0,
-      description: stats?.metrics?.appointments_this_week?.period || 'vs semana anterior'
+      color: 'text-warning',
+      bgColor: 'bg-yellow-50'
     },
     {
-      title: 'Calificación',
-      value: stats?.metrics?.average_rating?.value || 0,
-      icon: Star,
-      color: 'yellow',
-      trend: stats?.metrics?.average_rating?.change || 0,
-      description: stats?.metrics?.average_rating?.period || 'vs mes anterior',
-      format: 'rating'
+      title: 'Completadas',
+      value: `${completionRate}%`,
+      icon: CheckCircle,
+      color: 'text-success',
+      bgColor: 'bg-green-50'
     }
   ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {statsData.map((stat, index) => (
-        <StatsCard
-          key={index}
-          title={stat.title}
-          value={stat.value}
-          icon={<stat.icon className="w-6 h-6" />}
-          color={stat.color}
-          trend={stat.trend}
-          description={stat.description}
-          format={stat.format}
-        />
-      ))}
+      {stats.map((stat, index) => {
+        const IconComponent = stat.icon;
+        return (
+          <div key={index} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow border border-secondary">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-secondary mb-1">{stat.title}</p>
+                <p className="text-2xl font-bold text-primary">{stat.value}</p>
+              </div>
+              <div className={`p-3 rounded-full ${stat.bgColor}`}>
+                <IconComponent className={`h-6 w-6 ${stat.color}`} />
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };

@@ -131,7 +131,15 @@ const TodayAppointments: React.FC<TodayAppointmentsProps> = ({
                   <button className="p-2 text-primary hover:bg-primary-light rounded-lg transition-colors">
                     <Edit className="h-4 w-4" />
                   </button>
-                  <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                  <button 
+                    className="p-2 rounded-lg transition-colors"
+                    style={{ 
+                      color: 'var(--error)', 
+                      ':hover': { backgroundColor: 'var(--error-light)' } 
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--error-light)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>

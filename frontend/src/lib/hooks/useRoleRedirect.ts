@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -12,6 +12,8 @@ import { useAuth } from '../../contexts/AuthContext';
  * - Redirección automática según rol
  * - Preserva la URL de destino original si existe
  * - Maneja casos especiales para diferentes roles
+ * - ✅ ACTUALIZADO: No redirige si ya está en ruta válida
+ * - 🔄 HMR Update trigger
  */
 
 interface RoleRedirectConfig {
@@ -35,8 +37,9 @@ const defaultConfig: RoleRedirectConfig = {
       '/admin/users',
       '/admin/doctors',
       '/admin/patients',
-      '/admin/appointments',
+      '/admin/secretaries',
       '/admin/reports',
+      '/admin/notifications',
       '/admin/settings',
       '/profile',
     ],
@@ -44,15 +47,18 @@ const defaultConfig: RoleRedirectConfig = {
       '/admin/dashboard',
       '/admin/doctors',
       '/admin/patients',
-      '/admin/appointments',
+      '/admin/secretaries',
       '/admin/reports',
+      '/admin/notifications',
       '/profile',
     ],
     doctor: [
       '/doctor/dashboard',
       '/doctor/appointments',
+      '/doctor/consultations',
       '/doctor/patients',
       '/doctor/schedule',
+      '/doctor/profile',
       '/profile',
     ],
     secretary: [
@@ -80,6 +86,9 @@ export const useRoleRedirect = (config: RoleRedirectConfig = defaultConfig) => {
   const location = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
 
+  // Estabilizar la configuración para evitar re-renders innecesarios
+  const stableConfig = useMemo(() => config, []);
+
   useEffect(() => {
     // No hacer nada si está cargando o no está autenticado
     if (isLoading || !isAuthenticated || !user) {
@@ -93,22 +102,31 @@ export const useRoleRedirect = (config: RoleRedirectConfig = defaultConfig) => {
     const intendedDestination = location.state?.from?.pathname;
 
     // Si hay una URL de destino y el usuario tiene permisos para acceder
-    if (intendedDestination && isRouteAllowed(userRole, intendedDestination, config)) {
+    if (intendedDestination && isRouteAllowed(userRole, intendedDestination, stableConfig)) {
       navigate(intendedDestination, { replace: true });
       return;
     }
 
-    // Si está en la raíz o en una ruta no permitida, redirigir a la ruta por defecto
-    if (currentPath === '/' || !isRouteAllowed(userRole, currentPath, config)) {
-      const defaultRoute = getDefaultRoute(userRole, config);
+    // Solo redirigir si está en la raíz O en una ruta no permitida
+    // Si el usuario ya está en una ruta válida para su rol, NO redirigir
+    if (currentPath === '/') {
+      // Si está en la raíz, redirigir a la ruta por defecto
+      const defaultRoute = getDefaultRoute(userRole, stableConfig);
+      navigate(defaultRoute, { replace: true });
+      return;
+    }
+
+    // Solo redirigir si la ruta actual NO está permitida para el rol del usuario
+    if (!isRouteAllowed(userRole, currentPath, stableConfig)) {
+      const defaultRoute = getDefaultRoute(userRole, stableConfig);
       navigate(defaultRoute, { replace: true });
     }
-  }, [user, isAuthenticated, isLoading, location, navigate, config]);
+  }, [user, isAuthenticated, isLoading, location.pathname, navigate, stableConfig]);
 
   return {
-    getDefaultRoute: (role: string) => getDefaultRoute(role, config),
-    isRouteAllowed: (role: string, path: string) => isRouteAllowed(role, path, config),
-    getAllowedRoutes: (role: string) => getAllowedRoutes(role, config),
+    getDefaultRoute: (role: string) => getDefaultRoute(role, stableConfig),
+    isRouteAllowed: (role: string, path: string) => isRouteAllowed(role, path, stableConfig),
+    getAllowedRoutes: (role: string) => getAllowedRoutes(role, stableConfig),
   };
 };
 

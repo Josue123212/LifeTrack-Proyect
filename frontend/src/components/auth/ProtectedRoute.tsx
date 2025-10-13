@@ -1,7 +1,5 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Button } from '../ui/Button';
-import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { useAuth } from '../../contexts/AuthContext';
 import UnauthorizedPage from '../../pages/UnauthorizedPage';
 
@@ -31,16 +29,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { isAuthenticated, user, isLoading } = useAuth();
   const location = useLocation();
 
-  // Mostrar loading mientras se verifica la autenticación
+  // 🔄 Estado de carga
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Verificando autenticación...</p>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-text-secondary">Verificando autenticación...</p>
+        </div>
       </div>
     );
   }
@@ -73,87 +69,63 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
  */
 interface PublicRouteProps {
   children: React.ReactNode;
-  redirectTo?: string;
 }
 
-const PublicRoute: React.FC<PublicRouteProps> = ({ 
-  children, 
-  redirectTo = '/dashboard' 
-}) => {
+const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
-  // Mostrar loading mientras se verifica la autenticación
+  // 🔄 Estado de carga
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando...</p>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-text-secondary">Cargando...</p>
+        </div>
       </div>
     );
   }
 
   // Si está autenticado, redirigir al dashboard
   if (isAuthenticated) {
-    return <Navigate to={redirectTo} replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   // Si no está autenticado, mostrar el contenido público
   return <>{children}</>;
 };
 
-/**
- * 🔧 UTILIDADES DE AUTENTICACIÓN SIMULADA
- * 
- * Funciones helper para manejar la autenticación simulada
- * TODO: Reemplazar con servicios de autenticación reales
- */
-export const authUtils = {
-  /**
-   * Simula un login exitoso
-   */
-  login: (email: string, password: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // Simular login exitoso para cualquier credencial
-        localStorage.setItem('demo_token', 'demo_jwt_token_123');
-        localStorage.setItem('demo_user', JSON.stringify({
-          id: '1',
-          name: 'Usuario Demo',
-          email: email,
-          role: 'patient'
-        }));
-        resolve(true);
-      }, 1000);
-    });
+// 🔐 UTILIDADES DE AUTENTICACIÓN SIMULADA
+// TODO: Reemplazar con autenticación real
+const authUtils = {
+  login: (email: string, _password: string): boolean => {
+    // Simulación de login
+    const mockUser = {
+      id: '1',
+      email,
+      name: 'Usuario Demo',
+      role: 'admin' as const
+    };
+    
+    localStorage.setItem('user', JSON.stringify(mockUser));
+    localStorage.setItem('isAuthenticated', 'true');
+    return true;
   },
 
-  /**
-   * Simula un logout
-   */
   logout: (): void => {
-    localStorage.removeItem('demo_token');
-    localStorage.removeItem('demo_user');
+    localStorage.removeItem('user');
+    localStorage.removeItem('isAuthenticated');
   },
 
-  /**
-   * Obtiene el usuario actual
-   */
   getCurrentUser: () => {
-    const userStr = localStorage.getItem('demo_user');
+    const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
   },
 
-  /**
-   * Verifica si el usuario está autenticado
-   */
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem('demo_token');
+    return localStorage.getItem('isAuthenticated') === 'true';
   }
 };
 
-export { ProtectedRoute, PublicRoute };
+export { ProtectedRoute, PublicRoute, authUtils };
 export default ProtectedRoute;

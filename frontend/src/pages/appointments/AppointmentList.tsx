@@ -326,17 +326,17 @@ const AppointmentList: React.FC = () => {
                           <UserIcon className="h-8 w-8 text-gray-400" />
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
-                              {appointment.patient_info.user.first_name} {appointment.patient_info.user.last_name}
+                              {appointment.patient_info.full_name || 'Paciente no disponible'}
                             </div>
                             <div className="text-sm text-gray-500">
-                              {appointment.patient_info.user.email}
+                              {appointment.patient_info.email}
                             </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          Dr. {appointment.doctor_info.user.first_name} {appointment.doctor_info.user.last_name}
+                          Dr. {appointment.doctor_info.full_name || 'Doctor no disponible'}
                         </div>
                         <div className="text-sm text-gray-500">
                           {appointment.doctor_info.specialization}

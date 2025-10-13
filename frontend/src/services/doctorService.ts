@@ -5,6 +5,7 @@ import type {
   DoctorProfile,
   DoctorProfileData,
   DoctorBasicInfo,
+  DoctorDetail,
   DoctorSchedule,
   DoctorStats,
   DoctorAppointment,
@@ -13,6 +14,7 @@ import type {
   DoctorsListResponse,
   DoctorFilters
 } from '../types/doctor';
+import type { Appointment } from '../types/appointment';
 
 /**
  * Servicio para manejar todas las operaciones relacionadas con doctores
@@ -48,8 +50,8 @@ export const doctorService = {
    * Obtener detalle de un doctor específico (público)
    * GET /api/doctors/{id}/
    */
-  getDoctorDetail: async (doctorId: number): Promise<DoctorBasicInfo> => {
-    return apiHelpers.get<DoctorBasicInfo>(`/doctors/${doctorId}/`);
+  getDoctorDetail: async (doctorId: number): Promise<DoctorDetail> => {
+    return apiHelpers.get<DoctorDetail>(`/doctors/${doctorId}/`);
   },
 
   /**
@@ -61,6 +63,99 @@ export const doctorService = {
     return apiHelpers.get<DoctorSchedule>(`/doctors/${doctorId}/schedule/${params}`);
   },
 
+  /**
+   * Obtener estadísticas generales del sistema (público)
+   * GET /api/doctors/public/stats/
+   */
+  getGeneralStats: async (): Promise<{
+    message: string;
+    data: {
+      total_doctors: number;
+      total_specializations: number;
+    };
+  }> => {
+    return apiHelpers.get('/doctors/public/stats/');
+  },
+
+  /**
+   * Obtener todas las especialidades disponibles (público)
+   * GET /api/doctors/public/specializations/
+   */
+  getSpecializations: async (): Promise<{
+    message: string;
+    data: {
+      specializations: string[];
+      total_specializations: number;
+    };
+  }> => {
+    return apiHelpers.get('/doctors/public/specializations/');
+  },
+
+  // ==========================================
+  // ENDPOINTS DE ADMINISTRACIÓN (requieren permisos de admin)
+  // ==========================================
+
+  /**
+   * Crear un nuevo doctor (solo admin)
+   * POST /api/doctors/
+   */
+  createDoctor: async (doctorData: {
+    // Datos del usuario
+    username: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    phone: string;
+    password: string;
+    // Datos del doctor
+    medical_license: string;
+    specialization: string;
+    years_experience: number;
+    consultation_fee: number;
+    bio: string;
+    is_available?: boolean;
+    work_start_time?: string;
+    work_end_time?: string;
+    work_days?: string[];
+  }): Promise<{
+    message: string;
+    data: DoctorProfile;
+  }> => {
+    return apiHelpers.post('/doctors/', doctorData);
+  },
+
+  /**
+   * Actualizar estado de un doctor (solo admin)
+   * PATCH /api/doctors/{id}/
+   */
+  updateDoctorStatus: async (doctorId: number, status: 'active' | 'inactive' | 'disabled'): Promise<{
+    message: string;
+    data: DoctorProfile;
+  }> => {
+    return apiHelpers.patch(`/doctors/${doctorId}/`, { status });
+  },
+
+  /**
+   * Actualizar información de un doctor (solo admin)
+   * PATCH /api/doctors/{id}/
+   */
+  updateDoctor: async (doctorId: number, doctorData: {
+    medical_license?: string;
+    specialization?: string;
+    years_experience?: number;
+    consultation_fee?: number;
+    bio?: string;
+    is_available?: boolean;
+    work_start_time?: string;
+    work_end_time?: string;
+    work_days?: string[];
+  }): Promise<{
+    message: string;
+    data: DoctorProfile;
+  }> => {
+    return apiHelpers.patch(`/doctors/${doctorId}/`, doctorData);
+  },
+
   // ==========================================
   // ENDPOINTS PRIVADOS (requieren autenticación como doctor)
   // ==========================================
@@ -70,7 +165,8 @@ export const doctorService = {
    * GET /api/doctors/me/
    */
   getMyProfile: async (): Promise<DoctorProfile> => {
-    return apiHelpers.get<DoctorProfile>('/doctors/me/');
+    const response = await apiHelpers.get<{ data: DoctorProfile; message: string }>('/doctors/me/');
+    return response.data;
   },
 
   /**
@@ -78,7 +174,8 @@ export const doctorService = {
    * PUT /api/doctors/me/
    */
   updateMyProfile: async (profileData: DoctorProfileData): Promise<DoctorProfile> => {
-    return apiHelpers.put<DoctorProfile>('/doctors/me/', profileData);
+    const response = await apiHelpers.put<{ data: DoctorProfile; message: string }>('/doctors/me/', profileData);
+    return response.data;
   },
 
   /**
@@ -89,36 +186,7 @@ export const doctorService = {
     return apiHelpers.get<DoctorStats>('/doctors/me/stats/');
   },
 
-  /**
-   * Obtener citas del doctor autenticado
-   * GET /api/doctors/me/appointments/
-   */
-  getMyAppointments: async (params?: {
-    date_from?: string;
-    date_to?: string;
-    status?: string;
-    page?: number;
-  }): Promise<{
-    count: number;
-    next: string | null;
-    previous: string | null;
-    results: DoctorAppointment[];
-  }> => {
-    const queryParams = new URLSearchParams();
-    
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          queryParams.append(key, value.toString());
-        }
-      });
-    }
 
-    const queryString = queryParams.toString();
-    const url = queryString ? `/doctors/me/appointments/?${queryString}` : '/doctors/me/appointments/';
-    
-    return apiHelpers.get(url);
-  },
 
   /**
    * Obtener una cita específica del doctor
@@ -192,6 +260,34 @@ export const doctorService = {
   getMySchedule: async (date?: string): Promise<DoctorSchedule> => {
     const params = date ? `?date=${date}` : '';
     return apiHelpers.get<DoctorSchedule>(`/doctors/me/schedule/${params}`);
+  },
+
+  /**
+   * Obtener citas del doctor autenticado
+   * GET /api/doctors/me/appointments/
+   */
+  getMyAppointments: async (filters?: {
+    status?: string;
+    date_from?: string;
+    date_to?: string;
+  }): Promise<{
+    appointments: Appointment[];
+    total_appointments: number;
+  }> => {
+    const params = new URLSearchParams();
+    
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, value.toString());
+        }
+      });
+    }
+
+    const queryString = params.toString();
+    const url = queryString ? `/doctors/me/appointments/?${queryString}` : '/doctors/me/appointments/';
+    
+    return apiHelpers.get(url);
   },
 
   /**
@@ -313,7 +409,7 @@ export const doctorService = {
   },
 
   // ==========================================
-  // UTILIDADES
+  // MÉTODOS AUXILIARES
   // ==========================================
 
   /**

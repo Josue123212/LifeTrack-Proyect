@@ -63,6 +63,28 @@ def notification_count(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+def mark_notification_as_read(request, pk):
+    """Marca una notificación específica como leída"""
+    try:
+        notification = Notification.objects.get(
+            pk=pk,
+            user=request.user
+        )
+        notification.mark_as_read()
+        
+        return Response({
+            'message': 'Notificación marcada como leída',
+            'notification_id': pk
+        })
+    except Notification.DoesNotExist:
+        return Response(
+            {'error': 'Notificación no encontrada'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def mark_all_as_read(request):
     """Marca todas las notificaciones del usuario como leídas"""
     updated_count = Notification.objects.filter(
@@ -89,3 +111,78 @@ def create_notification(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def notification_stats(request):
+    """Obtiene estadísticas detalladas de notificaciones"""
+    user_notifications = Notification.objects.filter(user=request.user)
+    
+    stats = {
+        'total': user_notifications.count(),
+        'unread': user_notifications.filter(is_read=False).count(),
+        'read': user_notifications.filter(is_read=True).count(),
+        'by_type': {}
+    }
+    
+    # Estadísticas por tipo
+    for choice in Notification.TYPE_CHOICES:
+        type_code = choice[0]
+        type_name = choice[1]
+        count = user_notifications.filter(type=type_code).count()
+        unread_count = user_notifications.filter(type=type_code, is_read=False).count()
+        
+        stats['by_type'][type_code] = {
+            'name': type_name,
+            'total': count,
+            'unread': unread_count
+        }
+    
+    return Response(stats)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_notification(request, pk):
+    """Elimina una notificación específica"""
+    try:
+        notification = Notification.objects.get(
+            pk=pk,
+            user=request.user
+        )
+        notification.delete()
+        
+        return Response({
+            'message': 'Notificación eliminada correctamente',
+            'notification_id': pk
+        })
+    except Notification.DoesNotExist:
+        return Response(
+            {'error': 'Notificación no encontrada'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def bulk_mark_as_read(request):
+    """Marca múltiples notificaciones como leídas"""
+    notification_ids = request.data.get('notification_ids', [])
+    
+    if not notification_ids:
+        return Response(
+            {'error': 'Se requiere una lista de IDs de notificaciones'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    updated_count = Notification.objects.filter(
+        pk__in=notification_ids,
+        user=request.user,
+        is_read=False
+    ).update(is_read=True)
+    
+    return Response({
+        'message': f'{updated_count} notificaciones marcadas como leídas',
+        'updated_count': updated_count
+    })

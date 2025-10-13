@@ -1,11 +1,14 @@
 import React from 'react';
 import type { User } from '../../types/auth';
+import type { DoctorDashboardStats } from '../../services/dashboardService';
 
 interface WelcomeCardProps {
   user: User | null;
+  customMessage?: string;
+  dashboardData?: DoctorDashboardStats;
 }
 
-const WelcomeCard: React.FC<WelcomeCardProps> = ({ user }) => {
+const WelcomeCard: React.FC<WelcomeCardProps> = ({ user, customMessage, dashboardData }) => {
   const currentHour = new Date().getHours();
   const getGreeting = () => {
     if (currentHour < 12) return 'Buenos días';
@@ -23,13 +26,13 @@ const WelcomeCard: React.FC<WelcomeCardProps> = ({ user }) => {
   };
 
   return (
-    <div className="bg-white rounded-xl lg:rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 p-4 sm:p-6 lg:p-8">
+    <div className="rounded-xl lg:rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 p-4 sm:p-6 lg:p-8" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)' }}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div className="mb-4 sm:mb-0">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light text-gray-800 mb-2">
-            {getGreeting()}, {user?.firstName || 'Usuario'}
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light mb-2" style={{ color: 'var(--text-primary)' }}>
+            {customMessage || `${getGreeting()}, ${user?.firstName || 'Usuario'}`}
           </h1>
-          <p className="text-sm sm:text-base text-gray-500">
+          <p className="text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>
             {getCurrentDate()}
           </p>
         </div>
@@ -39,17 +42,17 @@ const WelcomeCard: React.FC<WelcomeCardProps> = ({ user }) => {
           <div className="flex items-center space-x-2">
             <div 
               className="w-3 h-3 rounded-full" 
-              style={{ backgroundColor: 'rgba(0, 206, 209, 0.8)' }}
+              style={{ backgroundColor: 'var(--success)' }}
             ></div>
-            <span className="text-xs sm:text-sm text-gray-600 font-medium">
+            <span className="text-xs sm:text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
               Cuenta Activa
             </span>
           </div>
           
           {/* User Avatar */}
           <div 
-            className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-white font-medium text-lg"
-            style={{ backgroundColor: 'rgba(0, 206, 209, 0.8)' }}
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center font-medium text-lg"
+            style={{ backgroundColor: 'var(--primary)', color: 'white' }}
           >
             {user?.firstName?.charAt(0) || 'U'}
           </div>
@@ -59,29 +62,29 @@ const WelcomeCard: React.FC<WelcomeCardProps> = ({ user }) => {
       {/* Quick Stats */}
       <div className="mt-6 lg:mt-8 grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
         <div className="text-center">
-          <div className="text-xl sm:text-2xl font-light text-gray-800 mb-1">
-            3
+          <div className="text-xl sm:text-2xl font-light mb-1" style={{ color: 'var(--text-primary)' }}>
+            {dashboardData?.upcoming_appointments?.length || 0}
           </div>
-          <div className="text-xs sm:text-sm text-gray-500">
+          <div className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>
             Citas Próximas
           </div>
         </div>
         
         <div className="text-center">
-          <div className="text-xl sm:text-2xl font-light text-gray-800 mb-1">
-            12
+          <div className="text-xl sm:text-2xl font-light mb-1" style={{ color: 'var(--text-primary)' }}>
+            {dashboardData?.appointments?.completed || 0}
           </div>
-          <div className="text-xs sm:text-sm text-gray-500">
+          <div className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>
             Citas Completadas
           </div>
         </div>
         
         <div className="text-center col-span-2 sm:col-span-1">
-          <div className="text-xl sm:text-2xl font-light text-gray-800 mb-1">
-            2
+          <div className="text-xl sm:text-2xl font-light mb-1" style={{ color: 'var(--text-primary)' }}>
+            {dashboardData?.patients?.total_unique || 0}
           </div>
-          <div className="text-xs sm:text-sm text-gray-500">
-            Doctores Favoritos
+          <div className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>
+            Pacientes Totales
           </div>
         </div>
       </div>

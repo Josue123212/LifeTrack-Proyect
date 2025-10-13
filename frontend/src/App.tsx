@@ -1,6 +1,8 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import { authService } from './services/authService';
+import LocationDebugger from './components/debug/LocationDebugger';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -10,6 +12,7 @@ import { DashboardPage } from './pages/dashboard/DashboardPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import ClientDashboard from './pages/dashboard/ClientDashboard';
 import DoctorDashboard from './pages/dashboard/DoctorDashboard';
+import SecretaryDashboard from './pages/dashboard/SecretaryDashboard';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 
@@ -17,6 +20,30 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import MyAppointmentsPage from './pages/client/MyAppointmentsPage';
 import ProfilePage from './pages/client/ProfilePage';
 import MedicalHistoryPage from './pages/client/MedicalHistoryPage';
+
+// Doctor Pages
+import DoctorSchedulePage from './pages/doctor/DoctorSchedulePage';
+import DoctorPatientsPage from './pages/doctor/DoctorPatientsPage';
+import DoctorAppointmentsPage from './pages/doctor/DoctorAppointmentsPage';
+import DoctorConsultationsPage from './pages/doctor/DoctorConsultationsPage';
+import DoctorConsultationsPageSimple from './pages/doctor/DoctorConsultationsPageSimple';
+import DoctorProfilePage from './pages/doctor/DoctorProfilePage';
+import PatientMedicalHistoryPage from './pages/doctor/PatientMedicalHistoryPage';
+
+// Secretary Pages
+import SecretaryAppointments from './pages/secretary/SecretaryAppointments';
+import SecretaryPatients from './pages/secretary/SecretaryPatients';
+import SecretaryCalendar from './pages/secretary/SecretaryCalendar';
+
+// Admin Pages
+import DoctorList from './pages/doctors/DoctorList';
+import DoctorProfile from './pages/doctors/DoctorProfile';
+import PatientList from './pages/patients/PatientList';
+import PatientProfile from './pages/patients/PatientProfile';
+import PatientEdit from './pages/patients/PatientEdit';
+import SecretaryList from './pages/secretaries/SecretaryList';
+import ReportCenter from './pages/reports/ReportCenter';
+import NotificationCenter from './pages/notifications/NotificationCenter';
 
 // Components
 import { ProtectedRoute, PublicRoute } from './components/auth/ProtectedRoute';
@@ -31,8 +58,7 @@ import RoleTestComponent from './components/RoleTestComponent';
 import AppointmentServiceTest from './test/appointmentService.test';
 import AppointmentList from './pages/appointments/AppointmentList';
 import AppointmentComponents from './pages/appointments/AppointmentComponents';
-import DoctorList from './pages/doctors/DoctorList';
-import DoctorProfile from './pages/doctors/DoctorProfile';
+
 
 /**
  * 🚀 APLICACIÓN PRINCIPAL
@@ -46,6 +72,13 @@ import DoctorProfile from './pages/doctors/DoctorProfile';
  * - Manejo de acceso no autorizado
  */
 function App() {
+  // Inicializar token CSRF al cargar la aplicación
+  useEffect(() => {
+    authService.initializeCSRF().catch(error => {
+      console.warn('Failed to initialize CSRF token:', error);
+    });
+  }, []);
+
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
       <BrowserRouter>
@@ -64,6 +97,7 @@ const AppRoutes: React.FC = () => {
 
   return (
     <div className="App">
+      <LocationDebugger />
       {/* Configuración de Rutas */}
       <Routes>
           {/* 🏠 RUTA PRINCIPAL - Página de inicio */}
@@ -157,7 +191,7 @@ const AppRoutes: React.FC = () => {
             path="/admin/doctors" 
             element={
               <ProtectedRoute requiredRole={['superadmin', 'admin']}>
-                <div className="p-8">Gestión de Doctores</div>
+                <DoctorList />
               </ProtectedRoute>
             } 
           />
@@ -166,7 +200,52 @@ const AppRoutes: React.FC = () => {
             path="/admin/patients" 
             element={
               <ProtectedRoute requiredRole={['superadmin', 'admin']}>
-                <div className="p-8">Gestión de Pacientes</div>
+                <PatientList />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/admin/patients/:id" 
+            element={
+              <ProtectedRoute requiredRole={['superadmin', 'admin']}>
+                <PatientProfile />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/admin/patients/:id/edit" 
+            element={
+              <ProtectedRoute requiredRole={['superadmin', 'admin']}>
+                <PatientEdit />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/admin/secretaries" 
+            element={
+              <ProtectedRoute requiredRole={['superadmin', 'admin']}>
+                <SecretaryList />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/admin/reports" 
+            element={
+              <ProtectedRoute requiredRole={['superadmin', 'admin']}>
+                <ReportCenter />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/admin/notifications" 
+            element={
+              <ProtectedRoute requiredRole={['superadmin', 'admin']}>
+                <NotificationCenter />
               </ProtectedRoute>
             } 
           />
@@ -182,10 +261,55 @@ const AppRoutes: React.FC = () => {
           />
           
           <Route 
+            path="/doctor/schedule" 
+            element={
+              <ProtectedRoute requiredRole={['doctor']}>
+                <DoctorSchedulePage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/doctor/patients" 
+            element={
+              <ProtectedRoute requiredRole={['doctor']}>
+                <DoctorPatientsPage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/doctor/patients/:patientId/history" 
+            element={
+              <ProtectedRoute requiredRole={['doctor']}>
+                <PatientMedicalHistoryPage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
             path="/doctor/appointments" 
             element={
-              <ProtectedRoute requiredRole={['doctor', 'admin']}>
-                <AppointmentList />
+              <ProtectedRoute requiredRole={['doctor']}>
+                <DoctorAppointmentsPage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/doctor/consultations" 
+            element={
+              <ProtectedRoute requiredRole={['doctor']}>
+                <DoctorConsultationsPage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/doctor/profile" 
+            element={
+              <ProtectedRoute requiredRole={['doctor']}>
+                <DoctorProfilePage />
               </ProtectedRoute>
             } 
           />
@@ -195,7 +319,34 @@ const AppRoutes: React.FC = () => {
             path="/secretary/dashboard" 
             element={
               <ProtectedRoute requiredRole={['secretary']}>
-                <div className="p-8">Dashboard de Secretaria</div>
+                <SecretaryDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/secretary/appointments" 
+            element={
+              <ProtectedRoute requiredRole={['secretary']}>
+                <SecretaryAppointments />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/secretary/patients" 
+            element={
+              <ProtectedRoute requiredRole={['secretary']}>
+                <SecretaryPatients />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/secretary/calendar" 
+            element={
+              <ProtectedRoute requiredRole={['secretary']}>
+                <SecretaryCalendar />
               </ProtectedRoute>
             } 
           />

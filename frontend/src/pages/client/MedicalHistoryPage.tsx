@@ -4,25 +4,28 @@ import { useQuery } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
-  Calendar, 
+  Calendar,
   Clock, 
   User, 
   FileText, 
-  Activity, 
-  Heart,
-  Pill,
-  AlertTriangle,
-  TrendingUp,
-  Filter,
-  Download,
-  Search
+  Pill, 
+  AlertTriangle, 
+  TrendingUp, 
+  Filter, 
+  Download, 
+  Search,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Clock3,
+  CalendarPlus
 } from 'lucide-react';
 
 import { appointmentService } from '../../services/appointmentService';
 import { dashboardService } from '../../services/dashboardService';
+import { doctorService } from '../../services/doctorService';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Appointment, ExtendedPatientAppointmentHistory, MedicalHistoryAppointment } from '../../types/appointment';
-import type { DashboardData } from '../../types/dashboard';
 
 // 🎨 Componentes UI
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -48,6 +51,8 @@ const MedicalHistoryPage: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>('');
 
+
+
   // 📊 Consulta del historial médico
   const { 
     data: medicalHistory, 
@@ -68,7 +73,6 @@ const MedicalHistoryPage: React.FC = () => {
 
   // 📈 Consulta de datos del dashboard
   const { 
-    data: dashboardData, 
     isLoading: isLoadingDashboard 
   } = useQuery({
     queryKey: ['client-dashboard'],
@@ -76,10 +80,19 @@ const MedicalHistoryPage: React.FC = () => {
     staleTime: 10 * 60 * 1000, // 10 minutos
   });
 
+  // 🏥 Consulta de especialidades disponibles
+  const { 
+    data: specializations, 
+    isLoading: isLoadingSpecializations 
+  } = useQuery({
+    queryKey: ['specializations'],
+    queryFn: doctorService.getSpecializations,
+    staleTime: 30 * 60 * 1000, // 30 minutos (las especialidades no cambian frecuentemente)
+  });
+
   // 🎯 Handlers
   const handleExportHistory = () => {
     // TODO: Implementar exportación de historial
-    console.log('Exportar historial médico');
   };
 
   const clearFilters = () => {
@@ -89,7 +102,7 @@ const MedicalHistoryPage: React.FC = () => {
   };
 
   // 🔄 Estados de carga
-  if (isLoadingHistory || isLoadingDashboard) {
+  if (isLoadingHistory || isLoadingDashboard || isLoadingSpecializations) {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-[400px]">
@@ -105,9 +118,9 @@ const MedicalHistoryPage: React.FC = () => {
       <Layout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Error al cargar historial</h2>
-            <p className="text-gray-600">No se pudo cargar el historial médico.</p>
+            <AlertTriangle className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--error)' }} />
+            <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Error al cargar historial</h2>
+            <p style={{ color: 'var(--text-secondary)' }}>No se pudo cargar el historial médico.</p>
           </div>
         </div>
       </Layout>
@@ -115,7 +128,7 @@ const MedicalHistoryPage: React.FC = () => {
   }
 
   // 🔍 Filtrar citas por término de búsqueda
-  const filteredAppointments = medicalHistory?.appointments?.filter(appointment => {
+  const filteredAppointments = medicalHistory?.data?.appointments?.filter(appointment => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -126,11 +139,7 @@ const MedicalHistoryPage: React.FC = () => {
     );
   }) || [];
 
-  // 📊 Estadísticas calculadas
-  const totalAppointments = medicalHistory?.appointments?.length || 0;
-  const completedAppointments = medicalHistory?.appointments?.filter(apt => apt.status === 'completed').length || 0;
-  const uniqueSpecialties = new Set(medicalHistory?.appointments?.map(apt => apt.specialty)).size || 0;
-  const uniqueDoctors = new Set(medicalHistory?.appointments?.map(apt => apt.doctor_name)).size || 0;
+
 
   return (
     <Layout>
@@ -138,72 +147,13 @@ const MedicalHistoryPage: React.FC = () => {
       {/* 📋 Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Historial Médico</h1>
-          <p className="text-gray-600">Tu historial médico completo</p>
+          <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Historial Médico</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>Tu historial médico completo</p>
         </div>
         <Button onClick={handleExportHistory} className="flex items-center gap-2">
           <Download className="h-4 w-4" />
           Exportar Historial
         </Button>
-      </div>
-
-      {/* 📊 Estadísticas Generales */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Calendar className="h-6 w-6 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Citas</p>
-                <p className="text-2xl font-bold text-gray-900">{totalAppointments}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Activity className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Completadas</p>
-                <p className="text-2xl font-bold text-gray-900">{completedAppointments}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <User className="h-6 w-6 text-purple-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Especialidades</p>
-                <p className="text-2xl font-bold text-gray-900">{uniqueSpecialties}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Heart className="h-6 w-6 text-orange-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Doctores</p>
-                <p className="text-2xl font-bold text-gray-900">{uniqueDoctors}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* 🔍 Filtros */}
@@ -218,7 +168,7 @@ const MedicalHistoryPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Búsqueda */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
               <Input
                 placeholder="Buscar en historial..."
                 value={searchTerm}
@@ -231,7 +181,13 @@ const MedicalHistoryPage: React.FC = () => {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 rounded-md focus:outline-none focus:ring-2"
+              style={{ 
+                border: '1px solid var(--border)', 
+                backgroundColor: 'var(--surface)',
+                color: 'var(--text-primary)',
+                focusRingColor: 'var(--primary)'
+              }}
             >
               <option value="">Todos los años</option>
               {Array.from({ length: 5 }, (_, i) => {
@@ -248,10 +204,16 @@ const MedicalHistoryPage: React.FC = () => {
             <select
               value={selectedSpecialty}
               onChange={(e) => setSelectedSpecialty(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 rounded-md focus:outline-none focus:ring-2"
+              style={{ 
+                border: '1px solid var(--border)', 
+                backgroundColor: 'var(--surface)',
+                color: 'var(--text-primary)',
+                focusRingColor: 'var(--primary)'
+              }}
             >
               <option value="">Todas las especialidades</option>
-              {Array.from(new Set(medicalHistory?.appointments?.map(apt => apt.specialty) || [])).map(specialty => (
+              {specializations?.data?.specializations?.map(specialty => (
                 <option key={specialty} value={specialty}>
                   {specialty}
                 </option>
@@ -270,10 +232,10 @@ const MedicalHistoryPage: React.FC = () => {
       {filteredAppointments.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
-            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No hay registros</h3>
-            <p className="text-gray-600">
-              {totalAppointments === 0 
+            <FileText className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
+            <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>No hay registros</h3>
+            <p style={{ color: 'var(--text-secondary)' }}>
+              {(medicalHistory?.data?.appointments?.length || 0) === 0 
                 ? 'Aún no tienes historial médico.' 
                 : 'No se encontraron registros con los filtros aplicados.'
               }
@@ -281,87 +243,194 @@ const MedicalHistoryPage: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {filteredAppointments.map((appointment) => (
-            <Card key={appointment.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        Dr. {appointment.doctor_name}
-                      </h3>
-                      <Badge className="bg-blue-100 text-blue-800">
-                        {appointment.specialty}
-                      </Badge>
-                      {appointment.status === 'completed' && (
-                        <Badge className="bg-green-100 text-green-800">
-                          Completada
-                        </Badge>
-                      )}
-                    </div>
+         <div className="space-y-4">
+           {filteredAppointments.map((appointment) => {
+             const appointmentDate = appointment.date ? parseISO(appointment.date) : new Date();
+                const createdDate = appointment.created_at ? parseISO(appointment.created_at) : new Date();
+                const updatedDate = appointment.updated_at ? parseISO(appointment.updated_at) : new Date();
+             
+             // Determinar el ícono del estado
+             const getStatusIcon = (status: string) => {
+               switch (status) {
+                 case 'completed':
+                   return <CheckCircle className="h-4 w-4 text-green-600" />;
+                 case 'cancelled':
+                   return <XCircle className="h-4 w-4 text-red-600" />;
+                 case 'confirmed':
+                   return <CheckCircle className="h-4 w-4 text-blue-600" />;
+                 case 'scheduled':
+                   return <Clock3 className="h-4 w-4 text-yellow-600" />;
+                 case 'no_show':
+                   return <AlertCircle className="h-4 w-4 text-orange-600" />;
+                 default:
+                   return <Clock3 className="h-4 w-4 text-gray-600" />;
+               }
+             };
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 mb-4">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        <span>
-                          {format(parseISO(appointment.date), 'EEEE, d MMMM yyyy', { locale: es })}
-                        </span>
-                      </div>
+             return (
+               <div key={appointment.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                 {/* Header con Doctor y Estado */}
+                 <div className="flex items-start justify-between mb-4">
+                   <div className="flex items-center space-x-3">
+                     <User className="h-5 w-5 text-gray-400" />
+                     <div>
+                       <h3 className="font-semibold text-gray-900">
+                         {appointment.doctor_info?.full_name || appointment.doctor_name || 'Dr. N/A'}
+                       </h3>
+                       <p className="text-sm text-gray-600">{appointment.doctor_info?.specialization || 'Especialización no disponible'}</p>
+                     </div>
+                   </div>
+                   
+                   {/* Badge de Estado Mejorado */}
+                   <div className="flex items-center space-x-2">
+                     {getStatusIcon(appointment.status)}
+                     <span 
+                       className={`px-3 py-1 rounded-full text-xs font-medium ${appointment.status_color}`}
+                     >
+                       {appointment.status_display}
+                     </span>
+                   </div>
+                 </div>
 
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        <span>{appointment.time}</span>
-                      </div>
-                    </div>
+                 {/* Información de Fechas y Horas */}
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                   {/* Fecha y Hora de la Cita */}
+                   <div className="flex items-center space-x-2">
+                     <Calendar className="h-4 w-4 text-blue-500" />
+                     <div>
+                       <p className="text-sm font-medium text-gray-900">Fecha de Cita</p>
+                       <p className="text-sm text-gray-600">
+                         {appointmentDate.toLocaleDateString('es-ES', {
+                           weekday: 'long',
+                           year: 'numeric',
+                           month: 'long',
+                           day: 'numeric'
+                         })}
+                       </p>
+                     </div>
+                   </div>
 
-                    {/* Diagnóstico */}
-                    {appointment.diagnosis && (
-                      <div className="mb-3">
-                        <h4 className="font-medium text-gray-900 mb-1">Diagnóstico:</h4>
-                        <p className="text-sm text-gray-700">{appointment.diagnosis}</p>
-                      </div>
-                    )}
+                   <div className="flex items-center space-x-2">
+                     <Clock className="h-4 w-4 text-blue-500" />
+                     <div>
+                       <p className="text-sm font-medium text-gray-900">Hora</p>
+                       <p className="text-sm text-gray-600">
+                         {new Date(`2000-01-01T${appointment.time}`).toLocaleTimeString('es-ES', {
+                           hour: '2-digit',
+                           minute: '2-digit'
+                         })}
+                       </p>
+                     </div>
+                   </div>
 
-                    {/* Tratamiento */}
-                    {appointment.treatment && (
-                      <div className="mb-3">
-                        <h4 className="font-medium text-gray-900 mb-1">Tratamiento:</h4>
-                        <p className="text-sm text-gray-700">{appointment.treatment}</p>
-                      </div>
-                    )}
+                   {/* Fecha de Creación */}
+                   <div className="flex items-center space-x-2">
+                     <CalendarPlus className="h-4 w-4 text-green-500" />
+                     <div>
+                       <p className="text-sm font-medium text-gray-900">Agendada</p>
+                       <p className="text-sm text-gray-600">
+                         {createdDate.toLocaleDateString('es-ES')} a las{' '}
+                         {createdDate.toLocaleTimeString('es-ES', {
+                           hour: '2-digit',
+                           minute: '2-digit'
+                         })}
+                       </p>
+                     </div>
+                   </div>
 
-                    {/* Medicamentos */}
-                    {appointment.medications && appointment.medications.length > 0 && (
-                      <div className="mb-3">
-                        <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
-                          <Pill className="h-4 w-4" />
-                          Medicamentos:
-                        </h4>
-                        <div className="flex flex-wrap gap-2">
-                          {appointment.medications.map((medication, index) => (
-                            <Badge key={index} className="bg-purple-100 text-purple-800">
-                              {medication}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                   {/* Fecha de Última Actualización */}
+                   {appointment.created_at !== appointment.updated_at && (
+                     <div className="flex items-center space-x-2">
+                       <Clock3 className="h-4 w-4 text-orange-500" />
+                       <div>
+                         <p className="text-sm font-medium text-gray-900">
+                           {appointment.status === 'cancelled' ? 'Cancelada' : 
+                            appointment.status === 'completed' ? 'Completada' : 
+                            appointment.status === 'confirmed' ? 'Confirmada' : 'Actualizada'}
+                         </p>
+                         <p className="text-sm text-gray-600">
+                           {updatedDate.toLocaleDateString('es-ES')} a las{' '}
+                           {updatedDate.toLocaleTimeString('es-ES', {
+                             hour: '2-digit',
+                             minute: '2-digit'
+                           })}
+                         </p>
+                       </div>
+                     </div>
+                   )}
+                 </div>
 
-                    {/* Notas */}
-                    {appointment.notes && (
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-1">Notas:</h4>
-                        <p className="text-sm text-gray-600">{appointment.notes}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                 {/* Detalles Médicos */}
+                 <div className="space-y-3">
+                   {/* Diagnóstico */}
+                   {appointment.diagnosis && (
+                     <div className="flex items-start space-x-2">
+                       <FileText className="h-4 w-4 text-gray-400 mt-0.5" />
+                       <div>
+                         <p className="text-sm font-medium text-gray-900">Diagnóstico</p>
+                         <p className="text-sm text-gray-600">{appointment.diagnosis}</p>
+                       </div>
+                     </div>
+                   )}
+
+                   {/* Tratamiento */}
+                   {appointment.treatment && (
+                     <div className="flex items-start space-x-2">
+                       <TrendingUp className="h-4 w-4 text-gray-400 mt-0.5" />
+                       <div>
+                         <p className="text-sm font-medium text-gray-900">Tratamiento</p>
+                         <p className="text-sm text-gray-600">{appointment.treatment}</p>
+                       </div>
+                     </div>
+                   )}
+
+                   {/* Medicamentos */}
+                   {appointment.medications && appointment.medications.length > 0 && (
+                     <div className="flex items-start space-x-2">
+                       <Pill className="h-4 w-4 text-gray-400 mt-0.5" />
+                       <div>
+                         <p className="text-sm font-medium text-gray-900">Medicamentos</p>
+                         <div className="flex flex-wrap gap-1 mt-1">
+                           {appointment.medications.map((medication, index) => (
+                             <span 
+                               key={index}
+                               className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md"
+                             >
+                               {medication}
+                             </span>
+                           ))}
+                         </div>
+                       </div>
+                     </div>
+                   )}
+
+                   {/* Notas */}
+                   {appointment.notes && (
+                     <div className="flex items-start space-x-2">
+                       <FileText className="h-4 w-4 text-gray-400 mt-0.5" />
+                       <div>
+                         <p className="text-sm font-medium text-gray-900">Notas</p>
+                         <p className="text-sm text-gray-600">{appointment.notes}</p>
+                       </div>
+                     </div>
+                   )}
+
+                   {/* Motivo de la Cita */}
+                   {appointment.reason && (
+                     <div className="flex items-start space-x-2">
+                       <AlertTriangle className="h-4 w-4 text-gray-400 mt-0.5" />
+                       <div>
+                         <p className="text-sm font-medium text-gray-900">Motivo de Consulta</p>
+                         <p className="text-sm text-gray-600">{appointment.reason}</p>
+                       </div>
+                     </div>
+                   )}
+                 </div>
+               </div>
+             );
+           })}
+         </div>
+       )}
 
       {/* 📊 Resumen del Año */}
       {medicalHistory?.summary && (
@@ -375,16 +444,16 @@ const MedicalHistoryPage: React.FC = () => {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
-                <p className="text-2xl font-bold text-blue-600">{medicalHistory.summary.total_visits}</p>
-                <p className="text-sm text-gray-600">Visitas Totales</p>
+                <p className="text-2xl font-bold" style={{ color: 'var(--primary)' }}>{medicalHistory.summary.total_visits}</p>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Visitas Totales</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-green-600">{medicalHistory.summary.preventive_care}</p>
-                <p className="text-sm text-gray-600">Cuidado Preventivo</p>
+                <p className="text-2xl font-bold" style={{ color: 'var(--success)' }}>{medicalHistory.summary.preventive_care}</p>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Cuidado Preventivo</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-purple-600">{medicalHistory.summary.follow_ups}</p>
-                <p className="text-sm text-gray-600">Seguimientos</p>
+                <p className="text-2xl font-bold" style={{ color: 'var(--info)' }}>{medicalHistory.summary.follow_ups}</p>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Seguimientos</p>
               </div>
             </div>
           </CardContent>

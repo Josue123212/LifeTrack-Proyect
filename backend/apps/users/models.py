@@ -292,6 +292,19 @@ class SecretaryProfile(models.Model):
         help_text='Permiso para gestionar información de pacientes'
     )
     
+    can_view_reports = models.BooleanField(
+        default=False,
+        verbose_name='Puede Ver Reportes',
+        help_text='Permiso para acceder a reportes y estadísticas'
+    )
+    
+    hire_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name='Fecha de Contratación',
+        help_text='Fecha en que fue contratada la secretaria'
+    )
+    
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Fecha de Creación'

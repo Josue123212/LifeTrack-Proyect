@@ -5,7 +5,7 @@ from .views import PatientViewSet
 
 # Router para ViewSets
 router = DefaultRouter()
-router.register(r'patients', PatientViewSet, basename='patient')
+router.register(r'', PatientViewSet, basename='patient')
 
 app_name = 'patients'
 
@@ -20,7 +20,7 @@ Estructura de URLs resultante:
 # ViewSet Routes (Principales)
 /api/patients/                          - GET (list), POST (create)
 /api/patients/{id}/                     - GET (retrieve), PUT (update), PATCH (partial_update), DELETE (destroy)
-/api/patients/{id}/medical_history/     - GET (historial médico del paciente)
+/api/patients/{id}/medical-history/     - GET (historial médico del paciente)
 /api/patients/{id}/appointments/        - GET (citas del paciente)
 /api/patients/{id}/statistics/          - GET (estadísticas del paciente)
 

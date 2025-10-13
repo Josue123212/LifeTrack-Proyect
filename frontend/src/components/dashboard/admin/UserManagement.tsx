@@ -180,7 +180,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
               <div className="flex items-center space-x-4">
                 <div className="h-10 w-10 bg-primary-light rounded-full flex items-center justify-center">
                   <span className="text-primary font-medium text-sm">
-                    {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    {((user.name && typeof user.name === 'string') ? user.name : 'Usuario').split(' ').map(n => n[0]).join('').toUpperCase()}
                   </span>
                 </div>
                 

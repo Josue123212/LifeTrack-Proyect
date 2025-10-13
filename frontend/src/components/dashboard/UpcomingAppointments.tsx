@@ -20,16 +20,16 @@ const UpcomingAppointments: React.FC<UpcomingAppointmentsProps> = ({
   appointments = [],
   isLoading = false
 }) => {
-  const getStatusColor = (status: string) => {
+  const getStatusStyles = (status: string) => {
     switch (status) {
-      case 'confirmada':
-        return 'bg-primary-light text-primary';
-      case 'pendiente':
-        return 'bg-primary-light text-primary';
-      case 'cancelada':
-        return 'bg-primary-light text-primary';
+      case 'confirmed':
+        return { backgroundColor: 'var(--success-light)', color: 'var(--success)' };
+      case 'pending':
+        return { backgroundColor: 'var(--warning-light)', color: 'var(--warning)' };
+      case 'cancelled':
+        return { backgroundColor: 'var(--error-light)', color: 'var(--error)' };
       default:
-        return 'bg-gray-100 text-gray-800';
+        return { backgroundColor: 'var(--surface)', color: 'var(--text-secondary)' };
     }
   };
 
@@ -112,7 +112,10 @@ const UpcomingAppointments: React.FC<UpcomingAppointmentsProps> = ({
                     <h3 className="font-medium text-text-primary">
                       {appointment.doctor}
                     </h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
+                    <span 
+                      className="px-2 py-1 rounded-full text-xs font-medium"
+                      style={getStatusStyles(appointment.status)}
+                    >
                       {getStatusText(appointment.status)}
                     </span>
                   </div>

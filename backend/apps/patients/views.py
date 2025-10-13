@@ -18,7 +18,8 @@ from .serializers import (
     PatientSerializer,
     PatientCreateSerializer,
     PatientUpdateSerializer,
-    PatientListSerializer
+    PatientListSerializer,
+    PatientStatusUpdateSerializer
 )
 from .filters import PatientFilter
 from apps.appointments.models import Appointment
@@ -59,7 +60,7 @@ class PatientViewSet(viewsets.ModelViewSet):
     - first_name, last_name, birth_date, phone, created_at
     """
     
-    queryset = Patient.objects.select_related('user').all()
+    queryset = Patient.objects.select_related('user')
     serializer_class = PatientSerializer
     permission_classes = [permissions.IsAuthenticated]
     
@@ -128,8 +129,15 @@ class PatientViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """
         Retorna el queryset filtrado según los parámetros de búsqueda.
+        Los administradores pueden ver todos los pacientes (incluyendo deshabilitados).
+        Los usuarios regulares solo ven pacientes activos.
         """
         queryset = Patient.objects.select_related('user').prefetch_related('appointments')
+        
+        # Filtrar por estado según el tipo de usuario
+        if not (self.request.user.is_staff or self.request.user.is_superuser):
+            # Usuarios regulares solo ven pacientes activos
+            queryset = queryset.filter(status='active', user__is_active=True)
         
         # Filtro por búsqueda general
         search = self.request.query_params.get('search', None)
@@ -146,6 +154,11 @@ class PatientViewSet(viewsets.ModelViewSet):
         blood_type = self.request.query_params.get('blood_type', None)
         if blood_type:
             queryset = queryset.filter(blood_type=blood_type)
+        
+        # Filtro por género
+        gender = self.request.query_params.get('gender', None)
+        if gender:
+            queryset = queryset.filter(gender=gender)
         
         # Filtro por rango de edad
         min_age = self.request.query_params.get('min_age', None)
@@ -426,3 +439,46 @@ class PatientViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_200_OK
         )
+    
+    @action(detail=True, methods=['patch'], url_path='update-status')
+    def update_status(self, request, pk=None):
+        """
+        Actualizar el estado del paciente (active, inactive, disabled).
+        Solo administradores pueden usar esta acción.
+        """
+        patient = self.get_object()
+        
+        # Verificar permisos de administrador
+        if not (request.user.is_staff or request.user.is_superuser):
+            return Response(
+                {
+                    'error': 'Permisos insuficientes',
+                    'detail': 'Solo los administradores pueden cambiar el estado de los pacientes'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        serializer = PatientStatusUpdateSerializer(patient, data=request.data, partial=True)
+        
+        try:
+            serializer.is_valid(raise_exception=True)
+            updated_patient = serializer.save()
+            
+            # Obtener el estado actualizado para la respuesta
+            patient_data = PatientListSerializer(updated_patient).data
+            
+            return Response(
+                {
+                    'message': f'Estado del paciente actualizado a {updated_patient.get_status_display()}',
+                    'data': patient_data
+                },
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response(
+                {
+                    'error': 'Error al actualizar estado del paciente',
+                    'detail': str(e)
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )

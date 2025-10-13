@@ -213,6 +213,7 @@ class AppointmentListSerializer(serializers.ModelSerializer):
     """
     patient_name = serializers.CharField(source='patient.full_name', read_only=True)
     doctor_name = serializers.CharField(source='doctor.full_name', read_only=True)
+    doctor_info = DoctorListSerializer(source='doctor', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     
     class Meta:
@@ -221,11 +222,14 @@ class AppointmentListSerializer(serializers.ModelSerializer):
             'id',
             'patient_name',
             'doctor_name',
+            'doctor_info',
             'date',
             'time',
             'status',
             'status_display',
-            'reason'
+            'reason',
+            'created_at',
+            'updated_at'
         ]
 
 

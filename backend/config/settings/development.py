@@ -26,6 +26,9 @@ INTERNAL_IPS = [
     'localhost',
 ]
 
+# Static files configuration for development
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 # Email backend for development (console) - COMENTADO para usar Gmail SMTP
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
@@ -34,6 +37,20 @@ AUTHENTICATION_BACKENDS = [
     'apps.users.backends.EmailOrUsernameModelBackend',
     'django.contrib.auth.backends.ModelBackend',  # Fallback
 ]
+
+# CSRF Configuration for development
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+]
+
+# CSRF Cookie settings for development
+CSRF_COOKIE_HTTPONLY = False  # Permitir acceso desde JavaScript
+CSRF_COOKIE_SAMESITE = 'Lax'  # Permitir cookies cross-site
+CSRF_COOKIE_SECURE = False    # HTTP para desarrollo
+CSRF_USE_SESSIONS = False     # No usar sesiones para CSRF
 
 # Logging configuration for development
 LOGGING = {

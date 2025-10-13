@@ -23,6 +23,13 @@ class PatientSerializer(serializers.ModelSerializer):
     age = serializers.SerializerMethodField()
     medical_summary = serializers.SerializerMethodField()
     
+    # Campos de estado
+    status_display = serializers.CharField(read_only=True)
+    status_color = serializers.CharField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
+    is_disabled = serializers.BooleanField(read_only=True)
+    can_access_system = serializers.BooleanField(read_only=True)
+    
     # Serializer anidado para citas (se importará dinámicamente para evitar imports circulares)
     appointments = serializers.SerializerMethodField()
     
@@ -31,6 +38,7 @@ class PatientSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'username', 'email', 'first_name', 'last_name', 'full_name',
             'date_of_birth', 'age', 'gender', 'phone_number', 'address',
+            'status', 'status_display', 'status_color', 'is_active', 'is_disabled', 'can_access_system',
             'blood_type', 'allergies', 'medical_conditions', 'medications',
             'emergency_contact_name', 'emergency_contact_phone', 
             'emergency_contact_relationship', 'medical_summary',
@@ -47,7 +55,23 @@ class PatientSerializer(serializers.ModelSerializer):
     
     def get_medical_summary(self, obj):
         """Retorna el resumen médico del paciente"""
-        return obj.get_medical_summary()
+        try:
+            summary_dict = obj.get_medical_summary()
+            # Convertir el diccionario a un formato serializable
+            return {
+                'blood_type': summary_dict.get('blood_type', 'No especificado'),
+                'allergies': summary_dict.get('allergies', 'Ninguna conocida'),
+                'medical_conditions': summary_dict.get('medical_conditions', 'Ninguna conocida'),
+                'medications': summary_dict.get('medications', 'Ninguna')
+            }
+        except Exception as e:
+            # En caso de error, devolver un resumen básico
+            return {
+                'blood_type': obj.blood_type or 'No especificado',
+                'allergies': obj.allergies or 'Ninguna conocida',
+                'medical_conditions': obj.medical_conditions or 'Ninguna conocida',
+                'medications': obj.medications or 'Ninguna'
+            }
     
     def get_appointments(self, obj):
         """Retorna las citas del paciente (últimas 5 citas)"""
@@ -56,6 +80,32 @@ class PatientSerializer(serializers.ModelSerializer):
             status__in=['scheduled', 'confirmed', 'completed']
         ).order_by('-date', '-time')[:5]
         return AppointmentListSerializer(appointments, many=True).data
+
+
+class PatientStatusUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer para actualizar el estado del paciente.
+    Permite cambiar entre active, inactive y disabled.
+    """
+    class Meta:
+        model = Patient
+        fields = ['status']
+    
+    def validate_status(self, value):
+        """Valida que el estado sea válido"""
+        valid_statuses = [choice[0] for choice in Patient.STATUS_CHOICES]
+        if value not in valid_statuses:
+            raise serializers.ValidationError(
+                f"Estado inválido. Opciones válidas: {', '.join(valid_statuses)}"
+            )
+        return value
+    
+    def update(self, instance, validated_data):
+        """Actualiza el estado del paciente usando el método set_status"""
+        new_status = validated_data.get('status')
+        if new_status:
+            instance.set_status(new_status)
+        return instance
     
     def validate_date_of_birth(self, value):
         """Valida que la fecha de nacimiento no sea futura"""
@@ -188,12 +238,15 @@ class PatientListSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='user.get_full_name', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
     age = serializers.SerializerMethodField()
+    status_display = serializers.CharField(read_only=True)
+    status_color = serializers.CharField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = Patient
         fields = (
             'id', 'full_name', 'email', 'age', 'gender', 
-            'phone_number', 'created_at'
+            'phone_number', 'status', 'status_display', 'status_color', 'is_active', 'created_at'
         )
         read_only_fields = ('id', 'full_name', 'email', 'age', 'created_at')
     

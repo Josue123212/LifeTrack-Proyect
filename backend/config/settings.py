@@ -309,6 +309,11 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
+        'django.request': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
         'audit': {
             'handlers': ['audit_file', 'console'],
             'level': 'INFO',
